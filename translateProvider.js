@@ -145,11 +145,30 @@ async function translateTextWithRetry(
     count++;
     return Array.isArray(texts) ? resultArray : result.text;
   } catch (error) {
+    // Check for specific API errors that shouldn't be retried
+    const nonRetryableErrors = [
+      'Insufficient Balance',
+      'invalid_api_key',
+      'authentication',
+      'unauthorized',
+      'quota_exceeded'
+    ];
+    
+    const errorMessage = error.message?.toLowerCase() || '';
+    const shouldNotRetry = nonRetryableErrors.some(err => 
+      errorMessage.includes(err.toLowerCase())
+    );
+    
+    if (shouldNotRetry) {
+      console.error(`Non-retryable error for ${provider}:`, error.message);
+      throw new Error(`${provider} Error: ${error.message}. Please check your API key and account balance.`);
+    }
+    
     if (attempt >= maxRetries) {
       throw error;
     }
 
-    console.error(`Attempt ${attempt}/${maxRetries} failed with error:`, error);
+    console.error(`Attempt ${attempt}/${maxRetries} failed with error:`, error.message);
     await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     return translateTextWithRetry(
       texts,
