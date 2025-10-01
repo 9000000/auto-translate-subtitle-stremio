@@ -1,5 +1,6 @@
 const googleLanguages = require("./langs/translateGoogleFree.lang.json");
 const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
+const deepseekLanguages = require("./langs/translateDeepSeek.lang.json");
 const opensubtitlesLanguages = require("./langs/opensubtitles.lang.json");
 
 function getValueFromKey(key) {
@@ -14,6 +15,9 @@ function getKeyFromValue(value, provider) {
       break;
     case "ChatGPT API":
       langMap = chatgptLanguages;
+      break;
+    case "DeepSeek API":
+      langMap = deepseekLanguages;
       break;
     default:
       throw new Error("Provider not found");
