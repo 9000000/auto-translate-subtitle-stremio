@@ -27,6 +27,7 @@ function generateSubtitleUrl(
 function getLanguageDisplayName(isoCode, provider) {
   const googleLanguages = require("./langs/translateGoogleFree.lang.json");
   const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
+  const deepseekLanguages = require("./langs/translateDeepSeek.lang.json");
   
   let langMap;
   switch (provider) {
@@ -35,6 +36,9 @@ function getLanguageDisplayName(isoCode, provider) {
       break;
     case "ChatGPT API":
       langMap = chatgptLanguages;
+      break;
+    case "DeepSeek API":
+      langMap = deepseekLanguages;
       break;
     default:
       return "Unknown";
@@ -45,7 +49,7 @@ function getLanguageDisplayName(isoCode, provider) {
 
 const builder = new addonBuilder({
   id: "org.autotranslate.geanpn",
-  version: "1.0.3",
+  version: "1.0.4",
   name: "Auto Subtitle Translate by geanpn",
   logo: "./subtitles/logo.webp",
   configurable: true,
@@ -59,23 +63,23 @@ const builder = new addonBuilder({
       title: "Provider",
       type: "select",
       required: true,
-      options: ["Google Translate", "ChatGPT API"],
+      options: ["Google Translate", "ChatGPT API", "DeepSeek API"],
     },
     {
       key: "apikey",
-      title: "ChatGPT API Key",
+      title: "API Key",
       type: "text",
       required: false,
       dependencies: [
         {
           key: "provider",
-          value: ["ChatGPT API"],
+          value: ["ChatGPT API", "DeepSeek API"],
         },
       ],
     },
     {
       key: "base_url",
-      title: "ChatGPT API Base URL",
+      title: "API Base URL",
       type: "text",
       required: false,
       default: "https://api.openai.com/v1/responses",
@@ -88,14 +92,14 @@ const builder = new addonBuilder({
     },
     {
       key: "model_name",
-      title: "ChatGPT API Model Name",
+      title: "Model Name",
       type: "text",
       required: false,
       default: "gpt-4o-mini",
       dependencies: [
         {
           key: "provider",
-          value: ["ChatGPT API"],
+          value: ["ChatGPT API", "DeepSeek API"],
         },
       ],
     },
@@ -109,7 +113,7 @@ const builder = new addonBuilder({
     },
   ],
   description:
-    "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate, or ChatGPT (OpenAI Compatible Providers). For donations:in progress Bug report: geanpn@gmail.com",
+    "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate, ChatGPT (OpenAI Compatible Providers), or DeepSeek API. For donations:in progress Bug report: geanpn@gmail.com",
   types: ["series", "movie"],
   catalogs: [],
   resources: ["subtitles"],
@@ -282,8 +286,8 @@ builder.defineSubtitlesHandler(async function (args) {
       oldisocode: targetLanguage,
       provider: config.provider,
       apikey: config.apikey ?? null,
-      base_url: config.base_url ?? "https://api.openai.com/v1/responses",
-      model_name: config.model_name ?? "gpt-4o-mini",
+      base_url: config.base_url ?? (config.provider === "DeepSeek API" ? "https://api.deepseek.com" : "https://api.openai.com/v1/responses"),
+      model_name: config.model_name ?? (config.provider === "DeepSeek API" ? "deepseek-chat" : "gpt-4o-mini"),
     });
 
     console.log(
