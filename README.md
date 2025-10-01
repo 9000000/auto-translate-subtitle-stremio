@@ -27,13 +27,16 @@ This addon follows the following workflow:
 
 This addon can be configured via Stremio with the following options:
 
-- Provider: Choose from Google Translate, or ChatGPT (OpenAI Compatible Providers)
-- BASE URL: Required for ChatGPT
+- **Provider**: Choose from Google Translate, ChatGPT (OpenAI Compatible), or DeepSeek API
+- **API Key**: Required for ChatGPT and DeepSeek API
+- **BASE URL**: Required for ChatGPT (not needed for DeepSeek)
   - ChatGPT: https://api.openai.com/v1/responses
   - Gemini: https://generativelanguage.googleapis.com/v1beta/openai/
   - OpenRouter: https://openrouter.ai/api/v1/chat/completions
-- API Key: Required for ChatGPT
-- Target Language: Select your desired translation language
+- **Model Name**: 
+  - ChatGPT: gpt-4o-mini (default)
+  - DeepSeek: deepseek-chat (default)
+- **Target Language**: Select your desired translation language
 
 ## Technical Details
 
@@ -44,11 +47,21 @@ This addon can be configured via Stremio with the following options:
 
 ### Translation Providers
 
-- Google Translate
+- **Google Translate**
   - Web scraping method
-- ChatGPT (Compatible API)
+  - No API key required
+  - Free to use
+
+- **ChatGPT (Compatible API)**
   - Google Gemini
   - OpenRouter
+  - Official OpenAI API
+  - Requires API key
+
+- **DeepSeek API**
+  - Cost-effective AI translation
+  - High-quality results
+  - Requires API key from https://platform.deepseek.com
 
 ### Queue System
 
@@ -74,7 +87,7 @@ This addon uses a queue system to efficiently process translation requests:
 
 ## Installation
 
-1. Web Installation (Recommended)
+1. **Web Installation (Recommended)**
 
    - Open Stremio
    - Go to the following URL: In progress
@@ -83,7 +96,7 @@ This addon uses a queue system to efficiently process translation requests:
    - Click "Install"
    - The addon will be automatically configured in Stremio
 
-2. Manual Installation
+2. **Manual Installation**
 
    - Open Stremio
    - Navigate to Addons
@@ -91,7 +104,7 @@ This addon uses a queue system to efficiently process translation requests:
    - Paste this URL: In progress
    - Click "Install"
 
-3. Self-Hosting
+3. **Self-Hosting**
 
    ```bash
    # Clone the repository
@@ -102,51 +115,15 @@ This addon uses a queue system to efficiently process translation requests:
    npm install
 
    # Create necessary directories
-   mkdir -p debug subtitles
+   mkdir -p debug subtitles data
 
    # Create a .env file from .env.example
    cp .env.example .env
 
+   # Edit .env file with your configuration
+   # For DeepSeek API, set:
+   # PROVIDER=DeepSeek API
+   # API_KEY=your_deepseek_api_key
+
    # Start the addon
-   npm start
-   ```
-
-   Then, add `http://localhost:3000/manifest.json` to Stremio.
-
-The addon will be available at `http://localhost:3000`.
-
-## Environment Variables
-
-- `PORT`: Server port (default: 3000)
-- `ADDRESS`: Server address (default: 0.0.0.0)
-- `BASE_URL`: Base URL for subtitle files
-
-## Contributing
-
-Bug reports and pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## Support
-
-Bug reports: geanpn@gmail.com
-Donations: geanpn@gmail.com
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
-
-## Credits
-
-This project is based on [Auto-Subtitle-Translate-by-Sonsuz-Anime](https://github.com/sonsuzanime/Auto-Subtitle-Translate-by-Sonsuz-Anime) by @sonsuzanime. The original project was enhanced with:
-
-### Improvements:
-
-- Code optimization
-- Queue system for handling multiple translation requests
-- Improved error handling
-- Better caching system
-- Provider fallback system
-- Rate limit protection
-- Automatic provider rotation
-- Chunk optimization for large subtitles
-
-Thanks to @sonsuzanime for providing the original implementation that made this project possible.
+   npm
