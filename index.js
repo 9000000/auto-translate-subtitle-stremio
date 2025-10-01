@@ -165,33 +165,68 @@ builder.defineSubtitlesHandler(async function (args) {
       targetLanguage
     );
 
+    // FIX: Check if translated subtitle file actually exists
     if (existingSubtitle.length > 0) {
-      console.log(
-        "Subtitle found in database:",
-        generateSubtitleUrl(
-          targetLanguage,
-          imdbid,
-          season,
-          episode,
-          config.provider
-        )
+      const subtitleUrl = generateSubtitleUrl(
+        targetLanguage,
+        imdbid,
+        season,
+        episode,
+        config.provider
       );
-      return Promise.resolve({
-        subtitles: [
-          {
-            id: `${imdbid}-${targetLanguage}-subtitle`,
-            url: generateSubtitleUrl(
-              targetLanguage,
-              imdbid,
-              season,
-              episode,
-              config.provider
-            ),
-            lang: targetLanguage,
-            label: `${languageDisplayName} (Translated)`,
-          },
-        ],
-      });
+      
+      // Verify file exists before returning
+      const fs = require('fs').promises;
+      const subtitlePath = subtitleUrl.replace(`${process.env.BASE_URL}/`, '');
+      
+      try {
+        await fs.access(subtitlePath);
+        console.log("Subtitle found in database and file exists:", subtitleUrl);
+        
+        // FIX: Check if it's still a placeholder message
+        const fileContent = await fs.readFile(subtitlePath, 'utf-8');
+        const isPlaceholder = fileContent.includes("Translating subtitles") || 
+                             fileContent.includes("No subtitles found") ||
+                             fileContent.includes("Translation failed");
+        
+        if (isPlaceholder) {
+          console.log("Subtitle is still a placeholder, checking translation status...");
+          // Check if translation is in queue
+          const isInQueue = await connection.checkForTranslation(
+            imdbid,
+            season,
+            episode,
+            targetLanguage
+          );
+          
+          if (isInQueue !== false) {
+            return Promise.resolve({
+              subtitles: [
+                {
+                  id: `${imdbid}-${targetLanguage}-subtitle`,
+                  url: subtitleUrl,
+                  lang: targetLanguage,
+                  label: `${languageDisplayName} (Translating...)`,
+                },
+              ],
+            });
+          }
+        }
+        
+        return Promise.resolve({
+          subtitles: [
+            {
+              id: `${imdbid}-${targetLanguage}-subtitle`,
+              url: subtitleUrl,
+              lang: targetLanguage,
+              label: `${languageDisplayName} (Translated)`,
+            },
+          ],
+        });
+      } catch (fileError) {
+        console.log("Subtitle in DB but file not found, will re-fetch:", fileError.message);
+        // File doesn't exist, continue to fetch from OpenSubtitles
+      }
     }
 
     // 2. If not found, search OpenSubtitles
@@ -268,6 +303,43 @@ builder.defineSubtitlesHandler(async function (args) {
       "Subtitles found on OpenSubtitles, but not in target language. Translating..."
     );
 
+    // Check if already in translation queue
+    const isInQueue = await connection.checkForTranslation(
+      imdbid,
+      season,
+      episode,
+      targetLanguage
+    );
+    
+    if (isInQueue !== false) {
+      console.log("Translation already in progress");
+      await createOrUpdateMessageSub(
+        "Translating subtitles. Please wait 1 minute and try again.",
+        imdbid,
+        season,
+        episode,
+        targetLanguage,
+        config.provider
+      );
+      
+      return Promise.resolve({
+        subtitles: [
+          {
+            id: `${imdbid}-${targetLanguage}-subtitle`,
+            url: generateSubtitleUrl(
+              targetLanguage,
+              imdbid,
+              season,
+              episode,
+              config.provider
+            ),
+            lang: targetLanguage,
+            label: `${languageDisplayName} (Translating...)`,
+          },
+        ],
+      });
+    }
+
     await createOrUpdateMessageSub(
       "Translating subtitles. Please wait 1 minute and try again.",
       imdbid,
@@ -291,7 +363,7 @@ builder.defineSubtitlesHandler(async function (args) {
     });
 
     console.log(
-      "Subtitles processed",
+      "Subtitles queued for translation",
       generateSubtitleUrl(
         targetLanguage,
         imdbid,
