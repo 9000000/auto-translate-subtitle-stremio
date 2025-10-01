@@ -14,17 +14,35 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - ADDRESS=0.0.0.0
+      - BASE_URL=http://localhost:3000
       - DB_TYPE=sqlite
       - SQLITE_PATH=/usr/src/app/data/database.db
-      # Add your translation provider settings here
+      - PUBLISH_IN_STREMIO_STORE=FALSE
+      # Translation provider settings (uncomment and configure as needed)
       # - PROVIDER=Google Translate
       # For ChatGPT:
       # - PROVIDER=ChatGPT API
       # - API_KEY=your_openai_api_key
       # - BASE_URL=https://api.openai.com/v1/responses
-      # - MODEL_NAME=gpt-4
+      # - MODEL_NAME=gpt-4o-mini
     volumes:
-      - ./data:/usr/src/app/data # Persistent SQLite database
+      - ./data:/usr/src/app/data          # Persistent SQLite database
       - ./subtitles:/usr/src/app/subtitles # Subtitle files
-      - ./debug:/usr/src/app/debug # Debug logs
+      - ./debug:/usr/src/app/debug        # Debug logs
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--timeout=2", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - stremio-network
 
+networks:
+  stremio-network:
+    driver: bridge
+
+volumes:
+  data:
+  subtitles:
+  debug:
