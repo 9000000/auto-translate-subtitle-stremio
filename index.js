@@ -23,9 +23,23 @@ function generateSubtitleUrl(
   return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
 }
 
+// NEW: Function to get full language name from ISO code
+function getLanguageDisplayName(isoCode, configLanguage) {
+  // Use the configured language name if available, otherwise try to find it
+  if (configLanguage) {
+    return configLanguage;
+  }
+  
+  // Try to find language name from our language files
+  const googleLanguages = require("./langs/translateGoogleFree.lang.json");
+  const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
+  
+  return googleLanguages[isoCode] || chatgptLanguages[isoCode] || isoCode;
+}
+
 const builder = new addonBuilder({
   id: "org.autotranslate.geanpn",
-  version: "1.0.2",
+  version: "1.0.3",
   name: "Auto Subtitle Translate by geanpn",
   logo: "./subtitles/logo.webp",
   configurable: true,
@@ -109,6 +123,9 @@ builder.defineSubtitlesHandler(async function (args) {
     return Promise.resolve({ subtitles: [] });
   }
 
+  // Get display name for the language
+  const languageDisplayName = getLanguageDisplayName(targetLanguage, config.translateto);
+
   // Extract imdbid from id
   let imdbid = null;
   if (id.startsWith("dcool-")) {
@@ -152,7 +169,7 @@ builder.defineSubtitlesHandler(async function (args) {
       return Promise.resolve({
         subtitles: [
           {
-            id: `${imdbid}-subtitle`,
+            id: `${imdbid}-${targetLanguage}-subtitle`,
             url: generateSubtitleUrl(
               targetLanguage,
               imdbid,
@@ -160,7 +177,9 @@ builder.defineSubtitlesHandler(async function (args) {
               episode,
               config.provider
             ),
-            lang: `${targetLanguage}-translated`,
+            lang: targetLanguage, // Use ISO code directly
+            // Add label for better display on Android
+            label: `${languageDisplayName} (Translated)`,
           },
         ],
       });
@@ -187,7 +206,7 @@ builder.defineSubtitlesHandler(async function (args) {
       return Promise.resolve({
         subtitles: [
           {
-            id: `${imdbid}-subtitle`,
+            id: `${imdbid}-${targetLanguage}-subtitle`,
             url: generateSubtitleUrl(
               targetLanguage,
               imdbid,
@@ -195,7 +214,8 @@ builder.defineSubtitlesHandler(async function (args) {
               episode,
               config.provider
             ),
-            lang: `${targetLanguage}-translated`,
+            lang: targetLanguage,
+            label: `${languageDisplayName} (Translated)`,
           },
         ],
       });
@@ -220,9 +240,10 @@ builder.defineSubtitlesHandler(async function (args) {
       return Promise.resolve({
         subtitles: [
           {
-            id: `${imdbid}-subtitle`,
+            id: `${imdbid}-${targetLanguage}-subtitle`,
             url: foundSubtitle.url,
-            lang: foundSubtitle.lang,
+            lang: targetLanguage,
+            label: languageDisplayName,
           },
         ],
       });
@@ -243,7 +264,7 @@ builder.defineSubtitlesHandler(async function (args) {
 
     // 3. Process and translate subtitles
     translationQueue.push({
-      subs: [foundSubtitle], // Pass the found subtitle to the queue
+      subs: [foundSubtitle],
       imdbid: imdbid,
       season: season,
       episode: episode,
@@ -283,7 +304,7 @@ builder.defineSubtitlesHandler(async function (args) {
     return Promise.resolve({
       subtitles: [
         {
-          id: `${imdbid}-subtitle`,
+          id: `${imdbid}-${targetLanguage}-subtitle`,
           url: generateSubtitleUrl(
             targetLanguage,
             imdbid,
@@ -291,7 +312,8 @@ builder.defineSubtitlesHandler(async function (args) {
             episode,
             config.provider
           ),
-          lang: `${targetLanguage}-translated`,
+          lang: targetLanguage, // Use ISO code directly
+          label: `${languageDisplayName} (Translating...)`, // Add label
         },
       ],
     });
@@ -315,7 +337,6 @@ function parseId(id) {
       return { type: "movie", season: 1, episode: 1 };
     }
   } else if (id.startsWith("dcool-")) {
-    // New format: dcool-tomorrow-with-you::tomorrow-with-you-episode-1
     const match = id.match(/dcool-(.+)::(.+)-episode-(\d+)/);
     if (match) {
       const [, , title, episode] = match;
@@ -323,7 +344,7 @@ function parseId(id) {
         type: "series",
         title: title,
         episode: Number(episode),
-        season: 1, // Assuming season 1 for this format
+        season: 1,
       };
     }
   }
@@ -331,8 +352,6 @@ function parseId(id) {
 }
 
 // Comment out this line for local execution, uncomment for production deployment
-// Cannot publish to central locally as there is no public IP, so it won't show up in the Stremio store
-
 if (process.env.PUBLISH_IN_STREMIO_STORE == "TRUE") {
   publishToCentral(`http://${process.env.ADDRESS}/manifest.json`);
 }
