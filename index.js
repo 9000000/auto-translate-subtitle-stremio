@@ -25,16 +25,7 @@ function generateSubtitleUrl(
 
 // NEW: Function to get full language name from ISO code
 function getLanguageDisplayName(isoCode, configLanguage) {
-  // Use the configured language name if available, otherwise try to find it
-  if (configLanguage) {
-    return configLanguage;
-  }
-  
-  // Try to find language name from our language files
-  const googleLanguages = require("./langs/translateGoogleFree.lang.json");
-  const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
-  
-  return googleLanguages[isoCode] || chatgptLanguages[isoCode] || isoCode;
+  // Removed - not needed anymore
 }
 
 const builder = new addonBuilder({
@@ -123,9 +114,6 @@ builder.defineSubtitlesHandler(async function (args) {
     return Promise.resolve({ subtitles: [] });
   }
 
-  // Get display name for the language
-  const languageDisplayName = getLanguageDisplayName(targetLanguage, config.translateto);
-
   // Extract imdbid from id
   let imdbid = null;
   if (id.startsWith("dcool-")) {
@@ -177,9 +165,7 @@ builder.defineSubtitlesHandler(async function (args) {
               episode,
               config.provider
             ),
-            lang: targetLanguage, // Use ISO code directly
-            // Add label for better display on Android
-            label: `${languageDisplayName} (Translated)`,
+            lang: targetLanguage, // Use ISO code directly without label
           },
         ],
       });
@@ -241,9 +227,14 @@ builder.defineSubtitlesHandler(async function (args) {
         subtitles: [
           {
             id: `${imdbid}-${targetLanguage}-subtitle`,
-            url: foundSubtitle.url,
+            url: generateSubtitleUrl(
+              targetLanguage,
+              imdbid,
+              season,
+              episode,
+              config.provider
+            ),
             lang: targetLanguage,
-            label: languageDisplayName,
           },
         ],
       });
