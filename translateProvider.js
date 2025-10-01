@@ -69,6 +69,36 @@ async function translateTextWithRetry(
 
         break;
       }
+      case "DeepSeek API": {
+        const openai = new OpenAI({
+          apiKey: apikey,
+          baseURL: "https://api.deepseek.com",
+        });
+        const jsonInput = {
+          texts: texts.map((text, index) => ({ index, text })),
+        };
+
+        const prompt = `You are a professional movie subtitle translator.\nTranslate each subtitle text in the "texts" array of the following JSON object into the specified language "${targetLanguage}".\n\nThe output must be a JSON object with the same structure as the input. The "texts" array should contain the translated texts corresponding to their original indices.\n\n**Strict Requirements:**\n- Strictly preserve line breaks and original formatting for each subtitle.\n- Do not combine or split texts during translation.\n- The number of elements in the output array must exactly match the input array.\n- Ensure the final JSON is valid and retains the complete structure.\n\nInput:\n${JSON.stringify(
+          jsonInput
+        )}\n`;
+
+        const completion = await openai.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model: model_name || "deepseek-chat",
+          response_format: { type: "json_object" },
+          temperature: 0.3,
+        });
+
+        const translatedJson = JSON.parse(
+          completion.choices[0].message.content
+        );
+
+        resultArray = translatedJson.texts
+          .sort((a, b) => a.index - b.index)
+          .map((item) => item.text);
+
+        break;
+      }
       default:
         throw new Error("Provider not found");
     }
