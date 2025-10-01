@@ -23,9 +23,24 @@ function generateSubtitleUrl(
   return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
 }
 
-// NEW: Function to get full language name from ISO code
-function getLanguageDisplayName(isoCode, configLanguage) {
-  // Removed - not needed anymore
+// Function to get full language name from ISO code
+function getLanguageDisplayName(isoCode, provider) {
+  const googleLanguages = require("./langs/translateGoogleFree.lang.json");
+  const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
+  
+  let langMap;
+  switch (provider) {
+    case "Google Translate":
+      langMap = googleLanguages;
+      break;
+    case "ChatGPT API":
+      langMap = chatgptLanguages;
+      break;
+    default:
+      return "Unknown";
+  }
+  
+  return langMap[isoCode] || isoCode;
 }
 
 const builder = new addonBuilder({
@@ -114,6 +129,9 @@ builder.defineSubtitlesHandler(async function (args) {
     return Promise.resolve({ subtitles: [] });
   }
 
+  // Get language display name
+  const languageDisplayName = getLanguageDisplayName(targetLanguage, config.provider);
+
   // Extract imdbid from id
   let imdbid = null;
   if (id.startsWith("dcool-")) {
@@ -165,7 +183,8 @@ builder.defineSubtitlesHandler(async function (args) {
               episode,
               config.provider
             ),
-            lang: targetLanguage, // Use ISO code directly without label
+            lang: targetLanguage,
+            label: `${languageDisplayName} (Translated)`,
           },
         ],
       });
@@ -201,7 +220,7 @@ builder.defineSubtitlesHandler(async function (args) {
               config.provider
             ),
             lang: targetLanguage,
-            label: `${languageDisplayName} (Translated)`,
+            label: `${languageDisplayName} (No subtitles found)`,
           },
         ],
       });
@@ -235,6 +254,7 @@ builder.defineSubtitlesHandler(async function (args) {
               config.provider
             ),
             lang: targetLanguage,
+            label: `${languageDisplayName} (Translated)`,
           },
         ],
       });
@@ -303,8 +323,8 @@ builder.defineSubtitlesHandler(async function (args) {
             episode,
             config.provider
           ),
-          lang: targetLanguage, // Use ISO code directly
-          label: `${languageDisplayName} (Translating...)`, // Add label
+          lang: targetLanguage,
+          label: `${languageDisplayName} (Translating...)`,
         },
       ],
     });
