@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      target: production
+    image: stremio-translate-subtitle:latest
+    container_name: stremio-translate-subtitle
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - ADDRESS=0.0.0.0
+      - DB_TYPE=sqlite
+      - SQLITE_PATH=/usr/src/app/data/database.db
+      # Add your translation provider settings here
+      # - PROVIDER=Google Translate
+      # For ChatGPT:
+      # - PROVIDER=ChatGPT API
+      # - API_KEY=your_openai_api_key
+      # - BASE_URL=https://api.openai.com/v1/responses
+      # - MODEL_NAME=gpt-4
+    volumes:
+      - ./data:/usr/src/app/data # Persistent SQLite database
+      - ./subtitles:/usr/src/app/subtitles # Subtitle files
+      - ./debug:/usr/src/app/debug # Debug logs
+
