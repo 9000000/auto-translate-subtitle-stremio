@@ -1,8 +1,9 @@
 const googleLanguages = require("./langs/translateGoogleFree.lang.json");
 const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
+const opensubtitlesLanguages = require("./langs/opensubtitles.lang.json");
 
 function getValueFromKey(key) {
-  return data[key];
+  return opensubtitlesLanguages[key];
 }
 
 function getKeyFromValue(value, provider) {
@@ -27,7 +28,7 @@ function getKeyFromValue(value, provider) {
 }
 
 function getAllValues() {
-  return Object.values(data);
+  return Object.values(opensubtitlesLanguages);
 }
 
 module.exports = {
