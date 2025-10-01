@@ -1,0 +1,13 @@
+# Node & build artifacts
+node_modules
+npm-debug.log
+yarn-error.log
+dist
+build
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
