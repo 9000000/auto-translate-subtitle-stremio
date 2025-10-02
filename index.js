@@ -471,14 +471,26 @@ app.get('/configure', (req, res) => {
 </head>
 <body>
     <div id="root"></div>
-    <script type="module">
-        ${/* Insert React component code here */}
+    <script>
+        const { useState } = React;
+        
+        function ConfigurationApp() {
+            return React.createElement('div', { className: 'container mx-auto p-4' },
+                React.createElement('h1', { className: 'text-2xl font-bold' }, 
+                    'Stremio Subtitle Translator Configuration'
+                )
+            );
+        }
+        
+        ReactDOM.render(
+            React.createElement(ConfigurationApp),
+            document.getElementById('root')
+        );
     </script>
 </body>
 </html>
   `);
 });
-
 serveHTTP(builder.getInterface(), {
   cacheMaxAge: 10,
   port: port,
