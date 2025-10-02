@@ -1,12 +1,8 @@
 version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      target: production
-    image: stremio-translate-subtitle:latest
-    container_name: stremio-translate-subtitle
+    image: auto-translate-subtitle-stremio:latest
+    container_name: auto-translate-subtitle-stremio
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -19,12 +15,24 @@ services:
       - SQLITE_PATH=/usr/src/app/data/database.db
       - PUBLISH_IN_STREMIO_STORE=FALSE
       # Translation provider settings (uncomment and configure as needed)
+      
+      # For Google Translate (Free - No API key needed)
       # - PROVIDER=Google Translate
-      # For ChatGPT:
+      
+      # For Google Cloud Translation API (Paid - $20/month with 500K chars free)
+      # - PROVIDER=Google API
+      # - API_KEY=your_google_cloud_api_key
+      
+      # For ChatGPT API (OpenAI Compatible)
       # - PROVIDER=ChatGPT API
       # - API_KEY=your_openai_api_key
       # - BASE_URL=https://api.openai.com/v1/responses
       # - MODEL_NAME=gpt-4o-mini
+      
+      # For DeepSeek API
+      # - PROVIDER=DeepSeek API
+      # - API_KEY=your_deepseek_api_key
+      # - MODEL_NAME=deepseek-chat
     volumes:
       - ./data:/usr/src/app/data          # Persistent SQLite database
       - ./subtitles:/usr/src/app/subtitles # Subtitle files
