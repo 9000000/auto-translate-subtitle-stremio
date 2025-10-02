@@ -450,6 +450,35 @@ if (process.env.PUBLISH_IN_STREMIO_STORE == "TRUE") {
 const port = process.env.PORT || 3000;
 const address = process.env.ADDRESS || "0.0.0.0";
 
+const express = require("express");
+const path = require("path");
+
+// Create Express app for custom routes
+const app = express();
+
+// Serve configuration page
+app.get('/configure', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stremio Subtitle Translator - Configuration</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module">
+        ${/* Insert React component code here */}
+    </script>
+</body>
+</html>
+  `);
+});
+
 serveHTTP(builder.getInterface(), {
   cacheMaxAge: 10,
   port: port,
