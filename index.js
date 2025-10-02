@@ -23,9 +23,10 @@ function generateSubtitleUrl(
   return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
 }
 
-// Function to get full language name from ISO code
 function getLanguageDisplayName(isoCode, provider) {
   const googleLanguages = require("./langs/translateGoogleFree.lang.json");
+  const googleApiLanguages = require("./langs/translateGoogleApi.lang.json");
+  const geminiLanguages = require("./langs/translateGemini.lang.json");
   const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
   const deepseekLanguages = require("./langs/translateDeepSeek.lang.json");
   
@@ -33,6 +34,12 @@ function getLanguageDisplayName(isoCode, provider) {
   switch (provider) {
     case "Google Translate":
       langMap = googleLanguages;
+      break;
+    case "Google API":
+      langMap = googleApiLanguages;
+      break;
+    case "Gemini API":
+      langMap = geminiLanguages;
       break;
     case "ChatGPT API":
       langMap = chatgptLanguages;
@@ -49,7 +56,7 @@ function getLanguageDisplayName(isoCode, provider) {
 
 const builder = new addonBuilder({
   id: "org.autotranslate.geanpn",
-  version: "1.0.4",
+  version: "1.0.7",
   name: "Auto Subtitle Translate by geanpn",
   logo: "./subtitles/logo.webp",
   configurable: true,
@@ -63,7 +70,7 @@ const builder = new addonBuilder({
       title: "Provider",
       type: "select",
       required: true,
-      options: ["Google Translate", "ChatGPT API", "DeepSeek API"],
+      options: ["Google Translate", "Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
     },
     {
       key: "apikey",
@@ -73,7 +80,7 @@ const builder = new addonBuilder({
       dependencies: [
         {
           key: "provider",
-          value: ["ChatGPT API", "DeepSeek API"],
+          value: ["Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
         },
       ],
     },
@@ -99,7 +106,7 @@ const builder = new addonBuilder({
       dependencies: [
         {
           key: "provider",
-          value: ["ChatGPT API", "DeepSeek API"],
+          value: ["Gemini API", "ChatGPT API", "DeepSeek API"],
         },
       ],
     },
@@ -113,7 +120,7 @@ const builder = new addonBuilder({
     },
   ],
   description:
-    "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate, ChatGPT (OpenAI Compatible Providers), or DeepSeek API. For donations:in progress Bug report: geanpn@gmail.com",
+    "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate (Free), Google Cloud Translation API, Gemini AI, ChatGPT (OpenAI Compatible), or DeepSeek API. Bug report: geanpn@gmail.com",
   types: ["series", "movie"],
   catalogs: [],
   resources: ["subtitles"],
@@ -133,10 +140,8 @@ builder.defineSubtitlesHandler(async function (args) {
     return Promise.resolve({ subtitles: [] });
   }
 
-  // Get language display name
   const languageDisplayName = getLanguageDisplayName(targetLanguage, config.provider);
 
-  // Extract imdbid from id
   let imdbid = null;
   if (id.startsWith("dcool-")) {
     imdbid = "tt5994346";
@@ -157,7 +162,6 @@ builder.defineSubtitlesHandler(async function (args) {
   const { type, season = null, episode = null } = parseId(id);
 
   try {
-    // 1. Check if already exists in database
     const existingSubtitle = await connection.getsubtitles(
       imdbid,
       season,
@@ -165,7 +169,6 @@ builder.defineSubtitlesHandler(async function (args) {
       targetLanguage
     );
 
-    // FIX: Check if translated subtitle file actually exists
     if (existingSubtitle.length > 0) {
       const subtitleUrl = generateSubtitleUrl(
         targetLanguage,
@@ -175,7 +178,6 @@ builder.defineSubtitlesHandler(async function (args) {
         config.provider
       );
       
-      // Verify file exists before returning
       const fs = require('fs').promises;
       const subtitlePath = subtitleUrl.replace(`${process.env.BASE_URL}/`, '');
       
@@ -183,7 +185,6 @@ builder.defineSubtitlesHandler(async function (args) {
         await fs.access(subtitlePath);
         console.log("Subtitle found in database and file exists:", subtitleUrl);
         
-        // FIX: Check if it's still a placeholder message
         const fileContent = await fs.readFile(subtitlePath, 'utf-8');
         const isPlaceholder = fileContent.includes("Translating subtitles") || 
                              fileContent.includes("No subtitles found") ||
@@ -191,7 +192,6 @@ builder.defineSubtitlesHandler(async function (args) {
         
         if (isPlaceholder) {
           console.log("Subtitle is still a placeholder, checking translation status...");
-          // Check if translation is in queue
           const isInQueue = await connection.checkForTranslation(
             imdbid,
             season,
@@ -225,11 +225,9 @@ builder.defineSubtitlesHandler(async function (args) {
         });
       } catch (fileError) {
         console.log("Subtitle in DB but file not found, will re-fetch:", fileError.message);
-        // File doesn't exist, continue to fetch from OpenSubtitles
       }
     }
 
-    // 2. If not found, search OpenSubtitles
     const subs = await opensubtitles.getsubtitles(
       type,
       imdbid,
@@ -266,7 +264,6 @@ builder.defineSubtitlesHandler(async function (args) {
     }
 
     const foundSubtitle = subs[0];
-
     const mappedFoundSubtitleLang = isoCodeMapping[foundSubtitle.lang] || foundSubtitle.lang;
 
     if (mappedFoundSubtitleLang === targetLanguage) {
@@ -303,7 +300,6 @@ builder.defineSubtitlesHandler(async function (args) {
       "Subtitles found on OpenSubtitles, but not in target language. Translating..."
     );
 
-    // Check if already in translation queue
     const isInQueue = await connection.checkForTranslation(
       imdbid,
       season,
@@ -349,7 +345,14 @@ builder.defineSubtitlesHandler(async function (args) {
       config.provider
     );
 
-    // 3. Process and translate subtitles
+    // Default model names for different providers
+    let defaultModelName = "gpt-4o-mini";
+    if (config.provider === "DeepSeek API") {
+      defaultModelName = "deepseek-chat";
+    } else if (config.provider === "Gemini API") {
+      defaultModelName = "gemini-1.5-flash";
+    }
+
     translationQueue.push({
       subs: [foundSubtitle],
       imdbid: imdbid,
@@ -359,7 +362,7 @@ builder.defineSubtitlesHandler(async function (args) {
       provider: config.provider,
       apikey: config.apikey ?? null,
       base_url: config.base_url ?? (config.provider === "DeepSeek API" ? "https://api.deepseek.com" : "https://api.openai.com/v1/responses"),
-      model_name: config.model_name ?? (config.provider === "DeepSeek API" ? "deepseek-chat" : "gpt-4o-mini"),
+      model_name: config.model_name ?? defaultModelName,
     });
 
     console.log(
@@ -438,7 +441,6 @@ function parseId(id) {
   return { type: "unknown", season: 0, episode: 0 };
 }
 
-// Comment out this line for local execution, uncomment for production deployment
 if (process.env.PUBLISH_IN_STREMIO_STORE == "TRUE") {
   publishToCentral(`http://${process.env.ADDRESS}/manifest.json`);
 }
