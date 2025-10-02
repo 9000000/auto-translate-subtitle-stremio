@@ -452,13 +452,22 @@ const address = process.env.ADDRESS || "0.0.0.0";
 
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
+
+// Đảm bảo các thư mục cần thiết tồn tại
+const requiredDirs = ['subtitles', 'debug', 'data'];
+requiredDirs.forEach(dir => {
+  const dirPath = path.join(__dirname, dir);
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+    console.log(`✓ Created directory: ${dir}`);
+  }
+});
 
 // Create Express app for custom routes
 const app = express();
 
 // Serve configuration page
-// Thay thế phần app.get('/configure', ...) trong index.js bằng code này:
-
 app.get('/configure', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -685,6 +694,7 @@ app.get('/configure', (req, res) => {
 </html>
   `);
 });
+
 serveHTTP(builder.getInterface(), {
   cacheMaxAge: 10,
   port: port,
@@ -693,10 +703,8 @@ serveHTTP(builder.getInterface(), {
 })
   .then(() => {
     console.log(`Server started: http://${address}:${port}`);
-    console.log(
-      "Manifest available:",
-      `http://${address}:${port}/manifest.json`
-    );
+    console.log(`Configuration page: http://${address}:${port}/configure`);
+    console.log(`Manifest available: http://${address}:${port}/manifest.json`);
   })
   .catch((error) => {
     console.error("Server startup error:", error);
