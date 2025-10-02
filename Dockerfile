@@ -13,11 +13,11 @@ RUN apt-get update && apt-get install -y \
 # Create app directory
 WORKDIR /usr/src/app
 
-# Copy package.json only (ignore lock file to avoid conflicts)
-COPY package.json ./
+# Copy package files
+COPY package*.json ./
 
-# Install dependencies without lock file
-RUN npm install --omit=dev --no-package-lock
+# Clean install dependencies (ignore lock file conflicts)
+RUN rm -f package-lock.json && npm install --omit=dev
 
 # Copy source code
 COPY . .
