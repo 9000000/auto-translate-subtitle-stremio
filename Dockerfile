@@ -1,35 +1,38 @@
-# Multi-stage build for stremio-translate-subtitle
-FROM node:18-slim AS builder
+# Single-stage build for better compatibility
+FROM node:18-slim
 
-# Tạo thư mục app và cài đặt dependencies
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    sqlite3 \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
 WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm ci
+
+# Copy package.json only (ignore lock file to avoid conflicts)
+COPY package.json ./
+
+# Install dependencies without lock file
+RUN npm install --omit=dev --no-package-lock
 
 # Copy source code
 COPY . .
 
-# Tạo thư mục cần thiết cho ứng dụng
+# Create necessary directories
 RUN mkdir -p debug subtitles data
 
-# Production stage
-FROM node:18-slim AS production
-WORKDIR /usr/src/app
-
-# Cài đặt sqlite3 cho production image
-RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
-
-# Copy built app và node_modules
-COPY --from=builder /usr/src/app ./
-
-# Set môi trường production 
+# Set production environment
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV ADDRESS=0.0.0.0
 ENV DB_TYPE=sqlite
 ENV SQLITE_PATH=/usr/src/app/data/database.db
 
-# Expose port mặc định
+# Expose default port
 EXPOSE 3000
 
 # Health check
