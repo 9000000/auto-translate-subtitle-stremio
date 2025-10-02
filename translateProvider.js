@@ -1,8 +1,55 @@
-const googleTranslate = require("google-translate-api-browser");
+const axios = require("axios");
+const { Translate } = require("@google-cloud/translate").v2;
 const fs = require("fs").promises;
 const OpenAI = require("openai");
 
 var count = 0;
+
+// Direct Google Translate (unofficial API) - No library needed
+async function translateGoogleFree(texts, targetLanguage) {
+  const textToTranslate = texts.join(" ||| ");
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(textToTranslate)}`;
+  
+  try {
+    const response = await axios.get(url, {
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    // Parse response: [[["translated", "original", ...], ...], ...]
+    let translatedText = '';
+    if (response.data && response.data[0]) {
+      response.data[0].forEach(element => {
+        if (element && element[0]) {
+          translatedText += element[0];
+        }
+      });
+    }
+    
+    // Split by separator
+    const resultArray = translatedText.split('|||').map(t => t.trim());
+    
+    // Handle mismatch
+    if (texts.length !== resultArray.length && resultArray.length > 0) {
+      console.log('Google Free: Text count mismatch', texts.length, resultArray.length);
+      const diff = texts.length - resultArray.length;
+      if (diff > 0) {
+        const splitted = resultArray[0].split(' ');
+        if (splitted.length === diff + 1) {
+          return [...splitted, ...resultArray.slice(1)];
+        }
+      }
+    }
+    
+    return resultArray;
+  } catch (error) {
+    console.error('Google Free API error:', error.message);
+    throw error;
+  }
+}
+
 async function translateTextWithRetry(
   texts,
   targetLanguage,
@@ -19,24 +66,25 @@ async function translateTextWithRetry(
 
     switch (provider) {
       case "Google Translate": {
-        const textToTranslate = texts.join(" ||| ");
-        result = await googleTranslate.translate(textToTranslate, {
-          to: targetLanguage,
-          corsUrl: "http://cors-anywhere.herokuapp.com/",
+        // Use direct API instead of google-translate-api-browser
+        resultArray = await translateGoogleFree(texts, targetLanguage);
+        break;
+      }
+      case "Google API": {
+        // Official Google Cloud Translation API
+        const translate = new Translate({
+          key: apikey,
         });
-        resultArray = result.text.split("|||");
-        if (texts.length !== resultArray.length && resultArray.length > 0) {
-          console.log(texts);
-          console.log(resultArray);
-          const diff = texts.length - resultArray.length;
-          if (diff > 0) {
-            // Attempt to correct by splitting the first element if translation was merged
-            const splitted = resultArray[0].split(" ");
-            if (splitted.length === diff + 1) {
-              resultArray = [...splitted, ...resultArray.slice(1)];
-            }
-          }
-        }
+
+        // Parallel translation for speed
+        const translationPromises = texts.map(text => 
+          translate.translate(text, targetLanguage)
+        );
+
+        const translations = await Promise.all(translationPromises);
+        resultArray = translations.map(([translation]) => translation);
+        
+        console.log(`Google API translated ${resultArray.length} subtitle texts`);
         break;
       }
       case "ChatGPT API": {
@@ -103,17 +151,21 @@ async function translateTextWithRetry(
         throw new Error("Provider not found");
     }
 
+    // Validate result count
     if (texts.length != resultArray.length) {
       console.log(
         `Attempt ${attempt}/${maxRetries} failed. Text count mismatch:`,
         texts.length,
         resultArray.length
       );
+      
+      // Log for debugging
       await fs.writeFile(
         `debug/errorTranslate${count}.json`,
         JSON.stringify(
           {
             attempt,
+            provider,
             texts,
             translatedText: resultArray,
           },
@@ -128,7 +180,7 @@ async function translateTextWithRetry(
         );
       }
 
-      // Wait and retry
+      // Retry with exponential backoff
       await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
       return translateTextWithRetry(
         texts,
@@ -145,13 +197,15 @@ async function translateTextWithRetry(
     count++;
     return Array.isArray(texts) ? resultArray : result.text;
   } catch (error) {
-    // Check for specific API errors that shouldn't be retried
+    // Non-retryable errors
     const nonRetryableErrors = [
       'Insufficient Balance',
       'invalid_api_key',
       'authentication',
       'unauthorized',
-      'quota_exceeded'
+      'quota_exceeded',
+      'API key not valid',
+      'INVALID_ARGUMENT'
     ];
     
     const errorMessage = error.message?.toLowerCase() || '';
@@ -183,7 +237,6 @@ async function translateTextWithRetry(
   }
 }
 
-// Wrapper function to maintain original interface
 async function translateText(
   texts,
   targetLanguage,
