@@ -14,22 +14,27 @@ services:
       - DB_TYPE=sqlite
       - SQLITE_PATH=/usr/src/app/data/database.db
       - PUBLISH_IN_STREMIO_STORE=FALSE
-      # Translation provider settings (uncomment and configure as needed)
+            # Translation provider settings (uncomment and configure as needed)
       
-      # For Google Translate (Free - No API key needed)
+      # For Google Translate (Free - No API key needed, may be slow/blocked)
       # - PROVIDER=Google Translate
       
       # For Google Cloud Translation API (Paid - $20/month with 500K chars free)
       # - PROVIDER=Google API
       # - API_KEY=your_google_cloud_api_key
       
-      # For ChatGPT API (OpenAI Compatible)
+      # For Gemini API (FREE - Best choice! 1500 requests/day, excellent quality)
+      # - PROVIDER=Gemini API
+      # - API_KEY=your_gemini_api_key
+      # - MODEL_NAME=gemini-1.5-flash
+      
+      # For ChatGPT API (OpenAI Compatible - Paid)
       # - PROVIDER=ChatGPT API
       # - API_KEY=your_openai_api_key
       # - BASE_URL=https://api.openai.com/v1/responses
       # - MODEL_NAME=gpt-4o-mini
       
-      # For DeepSeek API
+      # For DeepSeek API (Paid - Cheapest AI option)
       # - PROVIDER=DeepSeek API
       # - API_KEY=your_deepseek_api_key
       # - MODEL_NAME=deepseek-chat
