@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { Translate } = require("@google-cloud/translate").v2;
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const fs = require("fs").promises;
 const OpenAI = require("openai");
 
@@ -18,7 +19,6 @@ async function translateGoogleFree(texts, targetLanguage) {
       }
     });
     
-    // Parse response: [[["translated", "original", ...], ...], ...]
     let translatedText = '';
     if (response.data && response.data[0]) {
       response.data[0].forEach(element => {
@@ -28,10 +28,8 @@ async function translateGoogleFree(texts, targetLanguage) {
       });
     }
     
-    // Split by separator
     const resultArray = translatedText.split('|||').map(t => t.trim());
     
-    // Handle mismatch
     if (texts.length !== resultArray.length && resultArray.length > 0) {
       console.log('Google Free: Text count mismatch', texts.length, resultArray.length);
       const diff = texts.length - resultArray.length;
@@ -66,17 +64,14 @@ async function translateTextWithRetry(
 
     switch (provider) {
       case "Google Translate": {
-        // Use direct API instead of google-translate-api-browser
         resultArray = await translateGoogleFree(texts, targetLanguage);
         break;
       }
       case "Google API": {
-        // Official Google Cloud Translation API
         const translate = new Translate({
           key: apikey,
         });
 
-        // Parallel translation for speed
         const translationPromises = texts.map(text => 
           translate.translate(text, targetLanguage)
         );
@@ -85,6 +80,49 @@ async function translateTextWithRetry(
         resultArray = translations.map(([translation]) => translation);
         
         console.log(`Google API translated ${resultArray.length} subtitle texts`);
+        break;
+      }
+      case "Gemini API": {
+        // Initialize Gemini
+        const genAI = new GoogleGenerativeAI(apikey);
+        const model = genAI.getGenerativeModel({ 
+          model: model_name || "gemini-1.5-flash"
+        });
+
+        // Create JSON input
+        const jsonInput = {
+          texts: texts.map((text, index) => ({ index, text })),
+        };
+
+        const prompt = `You are a professional movie subtitle translator.
+Translate each subtitle text in the "texts" array of the following JSON object into the specified language "${targetLanguage}".
+
+The output must be a JSON object with the same structure as the input. The "texts" array should contain the translated texts corresponding to their original indices.
+
+**Strict Requirements:**
+- Strictly preserve line breaks and original formatting for each subtitle.
+- Do not combine or split texts during translation.
+- The number of elements in the output array must exactly match the input array.
+- Ensure the final JSON is valid and retains the complete structure.
+- Return ONLY the JSON object, no additional text or markdown.
+
+Input:
+${JSON.stringify(jsonInput)}`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let responseText = response.text();
+        
+        // Clean response (remove markdown code blocks if present)
+        responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        const translatedJson = JSON.parse(responseText);
+
+        resultArray = translatedJson.texts
+          .sort((a, b) => a.index - b.index)
+          .map((item) => item.text);
+
+        console.log(`Gemini API translated ${resultArray.length} subtitle texts`);
         break;
       }
       case "ChatGPT API": {
@@ -151,7 +189,6 @@ async function translateTextWithRetry(
         throw new Error("Provider not found");
     }
 
-    // Validate result count
     if (texts.length != resultArray.length) {
       console.log(
         `Attempt ${attempt}/${maxRetries} failed. Text count mismatch:`,
@@ -159,7 +196,6 @@ async function translateTextWithRetry(
         resultArray.length
       );
       
-      // Log for debugging
       await fs.writeFile(
         `debug/errorTranslate${count}.json`,
         JSON.stringify(
@@ -180,7 +216,6 @@ async function translateTextWithRetry(
         );
       }
 
-      // Retry with exponential backoff
       await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
       return translateTextWithRetry(
         texts,
@@ -197,7 +232,6 @@ async function translateTextWithRetry(
     count++;
     return Array.isArray(texts) ? resultArray : result.text;
   } catch (error) {
-    // Non-retryable errors
     const nonRetryableErrors = [
       'Insufficient Balance',
       'invalid_api_key',
@@ -205,7 +239,8 @@ async function translateTextWithRetry(
       'unauthorized',
       'quota_exceeded',
       'API key not valid',
-      'INVALID_ARGUMENT'
+      'INVALID_ARGUMENT',
+      'API_KEY_INVALID'
     ];
     
     const errorMessage = error.message?.toLowerCase() || '';
