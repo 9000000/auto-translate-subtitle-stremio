@@ -1,7 +1,7 @@
 {
   "name": "stremio-translate-subtitle-by-geanpn",
-  "version": "1.0.6",
-  "description": "Stremio Addon to translate subtitles using Google Translate, Google Cloud API, ChatGPT or DeepSeek",
+  "version": "1.0.7",
+  "description": "Stremio Addon to translate subtitles using Google Translate, Google Cloud API, Gemini AI, ChatGPT or DeepSeek",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -13,6 +13,7 @@
     "subtitle",
     "translate",
     "google",
+    "gemini",
     "chatgpt",
     "deepseek"
   ],
@@ -20,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "@google-cloud/translate": "^8.0.2",
+    "@google/generative-ai": "^0.21.0",
     "axios": "^1.6.1",
     "better-queue": "^3.8.12",
     "dotenv": "^16.3.1",
