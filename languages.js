@@ -1,4 +1,6 @@
 const googleLanguages = require("./langs/translateGoogleFree.lang.json");
+const googleApiLanguages = require("./langs/translateGoogleApi.lang.json");
+const geminiLanguages = require("./langs/translateGemini.lang.json");
 const chatgptLanguages = require("./langs/translateChatGpt.lang.json");
 const deepseekLanguages = require("./langs/translateDeepSeek.lang.json");
 const opensubtitlesLanguages = require("./langs/opensubtitles.lang.json");
@@ -12,6 +14,12 @@ function getKeyFromValue(value, provider) {
   switch (provider) {
     case "Google Translate":
       langMap = googleLanguages;
+      break;
+    case "Google API":
+      langMap = googleApiLanguages;
+      break;
+    case "Gemini API":
+      langMap = geminiLanguages;
       break;
     case "ChatGPT API":
       langMap = chatgptLanguages;
