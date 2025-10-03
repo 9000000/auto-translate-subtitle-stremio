@@ -14,6 +14,7 @@ const translationQueue = new Queue(
         apikey,
         base_url,
         model_name,
+        batch_size,
       } = job;
 
       console.log("Processing subtitles:", subs);
@@ -28,7 +29,8 @@ const translationQueue = new Queue(
         provider,
         apikey,
         base_url,
-        model_name
+        model_name,
+        batch_size
       );
 
       cb(null, result);
