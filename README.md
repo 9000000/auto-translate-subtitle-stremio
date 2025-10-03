@@ -117,11 +117,14 @@ This addon uses a queue system to efficiently process translation requests:
    # Create necessary directories
    mkdir -p debug subtitles data
 
-   # Create a .env file with your configuration.
-   # Note: As .env.example is not provided, you'll need to create this file manually.
-   # For DeepSeek API, your .env file should contain:
-   # PROVIDER=DeepSeek API
-   # API_KEY=your_deepseek_api_key
+   # Create a .env file from the example template.
+   cp .env.example .env
+
+   # Now, edit the .env file with your specific configuration.
+   # For example, to use the DeepSeek API, you would set:
+   # DB_TYPE=mysql
+   # DATABASEHOST=your_db_host
+   # ...and so on.
 
    # Start the addon
    npm start

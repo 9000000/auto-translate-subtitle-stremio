@@ -123,22 +123,21 @@ class MySQLAdapter extends BaseAdapter {
       let params;
 
       if (season && episode) {
-        query = "SELECT COUNT(*) AS count, subcount FROM translation_queue WHERE series_imdbid = ? AND series_seasonno = ? AND series_episodeno = ? AND langcode = ?";
+        query = "SELECT COUNT(*) AS count FROM translation_queue WHERE series_imdbid = ? AND series_seasonno = ? AND series_episodeno = ? AND langcode = ?";
         params = [imdbid, season, episode, langcode];
       } else {
-        query = "SELECT COUNT(*) AS count, subcount FROM translation_queue WHERE series_imdbid = ? AND series_seasonno IS NULL AND series_episodeno IS NULL AND langcode = ?";
+        query = "SELECT COUNT(*) AS count FROM translation_queue WHERE series_imdbid = ? AND series_seasonno IS NULL AND series_episodeno IS NULL AND langcode = ?";
         params = [imdbid, langcode];
       }
 
       const result = await this.query(query, params);
-      const count = result[0].count;
-      const subcount = result[0].subcount;
 
-      if (count > 0) {
-        return subcount;
-      } else {
+      if (!result || result.length === 0) {
         return false;
       }
+
+      const count = result[0].count;
+      return count > 0;
     } catch (error) {
       console.error("Translation check error:", error.message);
       throw error;

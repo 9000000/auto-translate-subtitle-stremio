@@ -26,18 +26,24 @@ requiredDirs.forEach(dir => {
 });
 
 function generateSubtitleUrl(
+  relativePath
+) {
+  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
+  return `${baseUrl}/${relativePath}`;
+}
+
+function generateSubtitleRelativePath(
   targetLanguage,
   imdbid,
+  type,
   season,
   episode,
-  provider,
-  baseUrl = process.env.BASE_URL
+  provider
 ) {
-  // This function needs to be adjusted to work without a custom express server.
-  // The SDK serves files from a static path. We will construct a relative path.
-  const relativePath = `subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
-  // The full URL will be constructed by Stremio based on the addon's URL + the relative path.
-  return relativePath;
+  if (type === 'movie') {
+    return `subtitles/${provider}/${targetLanguage}/${imdbid}/${imdbid}-translated-1.srt`;
+  }
+  return `subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
 }
 
 function getLanguageDisplayName(isoCode, provider) {
@@ -104,8 +110,19 @@ const builder = new addonBuilder({
     {
       key: "model_name",
       title: "Model Name",
-      type: "text",
+      type: "select",
       required: false,
+      options: [
+        "gpt-4o-mini",
+        "gpt-4o",
+        "gpt-4-turbo",
+        "gpt-3.5-turbo",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "deepseek-chat",
+        "deepseek-coder"
+      ],
+      default: "gpt-4o-mini"
     },
     {
       key: "translateto",
@@ -126,26 +143,6 @@ const builder = new addonBuilder({
       title: "Save translated subtitles to cache",
       type: "boolean",
       default: true,
-    },
-    {
-      key: "char_limit",
-      title: "Character limit per session",
-      type: "number",
-      default: 2000,
-    },
-    {
-      key: "quality",
-      title: "Quality",
-      type: "select",
-      options: ["fast", "accurate"],
-      default: "fast",
-    },
-    {
-      key: "translate_mode",
-      title: "Translation Mode",
-      type: "select",
-      options: ["full", "keyword"],
-      default: "full",
     },
   ],
   description:
@@ -171,55 +168,54 @@ builder.defineSubtitlesHandler(async function (args) {
 
   const languageDisplayName = getLanguageDisplayName(targetLanguage, config.provider);
 
-  let imdbid = null;
-  if (id.startsWith("tt")) {
-    imdbid = id.split(":")[0];
-  } else {
+  const { type, imdbid, season, episode } = parseId(id);
+
+  if (type === 'unknown') {
     console.log("Invalid ID format:", id);
     return Promise.resolve({ subtitles: [] });
   }
 
-  const { type, season = null, episode = null } = parseId(id);
-
   try {
-    const existingSubtitle = await connection.getsubtitles(
-      imdbid,
-      season,
-      episode,
-      targetLanguage
-    );
-
-    const subtitleUrl = generateSubtitleUrl(
+    const subtitleRelativePath = generateSubtitleRelativePath(
         targetLanguage,
         imdbid,
+        type,
         season,
         episode,
         config.provider
       );
 
-    if (existingSubtitle.length > 0) {
-      const subtitlePath = path.join(__dirname, subtitleUrl);
+    const subtitleUrl = generateSubtitleUrl(subtitleRelativePath);
+    const subtitlePath = path.join(__dirname, subtitleRelativePath);
 
-      if (fs.existsSync(subtitlePath)) {
-        console.log("Subtitle found in database and file exists:", subtitleUrl);
-         const fileContent = fs.readFileSync(subtitlePath, 'utf-8');
-         const isPlaceholder = fileContent.includes("Translating subtitles") ||
-                              fileContent.includes("No subtitles found") ||
-                              fileContent.includes("Translation failed");
+    if (fs.existsSync(subtitlePath)) {
+        console.log("Subtitle file exists locally:", subtitleRelativePath);
+        const fileContent = fs.readFileSync(subtitlePath, 'utf-8');
+        const isPlaceholder = fileContent.includes("Translating subtitles") ||
+                             fileContent.includes("No subtitles found") ||
+                             fileContent.includes("Translation failed");
 
         if (isPlaceholder) {
-            // If the file is just a placeholder, let the user know it's being translated.
-            return Promise.resolve({
-                subtitles: [
-                    {
-                        id: `${imdbid}-${targetLanguage}-translating`,
-                        url: subtitleUrl,
-                        lang: `${languageDisplayName} (Translating...)`,
-                    },
-                ],
-            });
+            const isInQueue = await connection.checkForTranslation(
+                imdbid,
+                season,
+                episode,
+                targetLanguage
+            );
+
+            if (isInQueue) {
+                return Promise.resolve({
+                    subtitles: [
+                        {
+                            id: `${imdbid}-${targetLanguage}-translating`,
+                            url: subtitleUrl,
+                            lang: `${languageDisplayName} (Translating...)`,
+                        },
+                    ],
+                });
+            }
+            console.log("Placeholder found but job not in queue. Re-initiating translation.");
         } else {
-            // If the file is not a placeholder, it's a valid, translated subtitle.
             return Promise.resolve({
               subtitles: [
                 {
@@ -230,7 +226,6 @@ builder.defineSubtitlesHandler(async function (args) {
               ],
             });
         }
-      }
     }
 
     const subs = await opensubtitles.getsubtitles(
@@ -261,14 +256,40 @@ builder.defineSubtitlesHandler(async function (args) {
     }
 
     const foundSubtitle = subs[0];
+    const mappedFoundSubtitleLang = isoCodeMapping[foundSubtitle.lang] || foundSubtitle.lang;
 
-    // Add to translation queue
+    // Optimization: If the subtitle is already in the target language, just download and serve it.
+    if (mappedFoundSubtitleLang === targetLanguage) {
+        console.log("Desired language subtitle found on OpenSubtitles, using it directly.");
+
+        const downloadedFilePaths = await opensubtitles.downloadSubtitles([foundSubtitle], imdbid, season, episode, targetLanguage);
+        const tempPath = downloadedFilePaths[0];
+
+        const destDir = path.dirname(subtitlePath);
+        await fs.promises.mkdir(destDir, { recursive: true });
+
+        await fs.promises.rename(tempPath, subtitlePath);
+        console.log(`Moved subtitle from ${tempPath} to ${subtitlePath}`);
+
+        await connection.addsubtitle(imdbid, type, season, episode, subtitleRelativePath, targetLanguage);
+
+        return Promise.resolve({
+            subtitles: [
+                {
+                    id: `${imdbid}-${targetLanguage}-subtitle`,
+                    url: subtitleUrl,
+                    lang: languageDisplayName,
+                },
+            ],
+        });
+    }
+
     translationQueue.push({
       subs: [foundSubtitle],
       imdbid: imdbid,
       season: season,
       episode: episode,
-      oldisocode: targetLanguage, // This should be the target language
+      oldisocode: targetLanguage,
       provider: config.provider,
       apikey: config.apikey || null,
       base_url: config.base_url || null,
@@ -301,10 +322,13 @@ builder.defineSubtitlesHandler(async function (args) {
 
 function parseId(id) {
     const parts = id.split(':');
-    if (parts.length === 3) {
-        return { type: 'series', season: Number(parts[1]), episode: Number(parts[2]) };
+    if (parts.length === 3 && parts[0].startsWith('tt')) {
+        return { type: 'series', imdbid: parts[0], season: Number(parts[1]), episode: Number(parts[2]) };
     }
-    return { type: 'movie', season: null, episode: null };
+    if (parts.length === 1 && parts[0].startsWith('tt')) {
+        return { type: 'movie', imdbid: parts[0], season: null, episode: null };
+    }
+    return { type: 'unknown', imdbid: null, season: null, episode: null };
 }
 
 const port = process.env.PORT || 3000;

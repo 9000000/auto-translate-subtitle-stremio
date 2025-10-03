@@ -10,6 +10,7 @@ async function initializeDatabase() {
             console.log('Database initialized successfully!');
         } catch (error) {
             console.error('Database initialization error:', error);
+            // Re-throw the error so it can be handled by the caller.
             throw error;
         }
     }
@@ -78,8 +79,15 @@ async function closeConnection() {
     }
 }
 
-// The database will be initialized on the first request, not on module load.
-// initializeDatabase().catch(console.error);
+// Try to connect to the DB on startup, but don't crash the addon if it fails.
+// The addon will then try to connect again on the first request that needs a DB.
+(async () => {
+    try {
+        await initializeDatabase();
+    } catch (e) {
+        console.warn('Database connection failed on startup. Will retry on first request.', e.message);
+    }
+})();
 
 module.exports = {
     addToTranslationQueue,
