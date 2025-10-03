@@ -104,6 +104,7 @@ const builder = new addonBuilder({
         "gpt-3.5-turbo",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
+        "gemini-2.5-flash-image",
         "deepseek-chat",
         "deepseek-reasoner"
       ],
@@ -349,7 +350,7 @@ builder.defineSubtitlesHandler(async function (args) {
     if (config.provider === "DeepSeek API") {
       defaultModelName = "deepseek-chat";
     } else if (config.provider === "Gemini API") {
-      defaultModelName = "gemini-2.5-flash";
+      defaultModelName = "gemini-2.5-flash-image";
     }
 
     translationQueue.push({

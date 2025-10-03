@@ -86,7 +86,7 @@ async function translateTextWithRetry(
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apikey);
         const model = genAI.getGenerativeModel({ 
-          model: model_name || "gemini-2.5-flash"
+          model: model_name || "gemini-2.5-flash-image"
         });
 
         // Create JSON input
