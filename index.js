@@ -484,6 +484,7 @@ requiredDirs.forEach(dir => {
   }
 });
 
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve configuration page
 app.get('/configure', (req, res) => {
@@ -593,7 +594,6 @@ app.post('/save-config', (req, res) => {
   });
 });
 
-app.use(bodyParser.urlencoded({ extended: true }));
 
 serveHTTP(builder.getInterface(), {
   cacheMaxAge: 10,
