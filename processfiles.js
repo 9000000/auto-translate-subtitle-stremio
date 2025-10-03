@@ -116,7 +116,6 @@ class SubtitleProcessor {
       // Process remaining batch
       if (subtitleBatch.length > 0) {
         try {
-          subtitleBatch.push(this.texts[this.texts.length - 1]);
           await this.translateBatch(
             subtitleBatch,
             oldisocode,

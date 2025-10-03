@@ -119,10 +119,18 @@ class MySQLAdapter extends BaseAdapter {
 
   async checkForTranslation(imdbid, season = null, episode = null, langcode) {
     try {
-      const result = await this.query(
-        "SELECT COUNT(*) AS count,subcount FROM translation_queue WHERE series_imdbid =? AND series_seasonno = ? AND series_episodeno = ? AND langcode = ?",
-        [imdbid, season, episode, langcode]
-      );
+      let query;
+      let params;
+
+      if (season && episode) {
+        query = "SELECT COUNT(*) AS count, subcount FROM translation_queue WHERE series_imdbid = ? AND series_seasonno = ? AND series_episodeno = ? AND langcode = ?";
+        params = [imdbid, season, episode, langcode];
+      } else {
+        query = "SELECT COUNT(*) AS count, subcount FROM translation_queue WHERE series_imdbid = ? AND series_seasonno IS NULL AND series_episodeno IS NULL AND langcode = ?";
+        params = [imdbid, langcode];
+      }
+
+      const result = await this.query(query, params);
       const count = result[0].count;
       const subcount = result[0].subcount;
 
@@ -133,6 +141,7 @@ class MySQLAdapter extends BaseAdapter {
       }
     } catch (error) {
       console.error("Translation check error:", error.message);
+      return false;
     }
   }
 

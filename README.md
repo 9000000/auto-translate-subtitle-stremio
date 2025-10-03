@@ -109,7 +109,7 @@ This addon uses a queue system to efficiently process translation requests:
    ```bash
    # Clone the repository
    git clone https://github.com/HimAndRobot/stremio-translate-subtitle-by-geanpn.git
-   cd stremio-auto-translate
+   cd stremio-translate-subtitle-by-geanpn
 
    # Install dependencies
    npm install
@@ -117,13 +117,11 @@ This addon uses a queue system to efficiently process translation requests:
    # Create necessary directories
    mkdir -p debug subtitles data
 
-   # Create a .env file from .env.example
-   cp .env.example .env
-
-   # Edit .env file with your configuration
-   # For DeepSeek API, set:
+   # Create a .env file with your configuration.
+   # Note: As .env.example is not provided, you'll need to create this file manually.
+   # For DeepSeek API, your .env file should contain:
    # PROVIDER=DeepSeek API
    # API_KEY=your_deepseek_api_key
 
    # Start the addon
-   npm
+   npm start

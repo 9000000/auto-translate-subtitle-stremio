@@ -158,7 +158,7 @@ ${JSON.stringify(jsonInput)}`;
       case "DeepSeek API": {
         const openai = new OpenAI({
           apiKey: apikey,
-          baseURL: "https://api.deepseek.com",
+          baseURL: base_url,
         });
         const jsonInput = {
           texts: texts.map((text, index) => ({ index, text })),
