@@ -141,7 +141,7 @@ class MySQLAdapter extends BaseAdapter {
       }
     } catch (error) {
       console.error("Translation check error:", error.message);
-      return false;
+      throw error;
     }
   }
 

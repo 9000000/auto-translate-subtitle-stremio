@@ -78,8 +78,8 @@ async function closeConnection() {
     }
 }
 
-// Automatically initialize on module load
-initializeDatabase().catch(console.error);
+// The database will be initialized on the first request, not on module load.
+// initializeDatabase().catch(console.error);
 
 module.exports = {
     addToTranslationQueue,
