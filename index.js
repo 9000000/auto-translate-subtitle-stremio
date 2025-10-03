@@ -88,29 +88,26 @@ const builder = new addonBuilder({
     },
     {
       key: "base_url",
-      title: "API Base URL",
+      title: "API Base URL (for ChatGPT/Deepseek compatible)",
       type: "text",
       required: false,
-      default: "https://api.openai.com/v1/responses",
-      dependencies: [
-        {
-          key: "provider",
-          value: ["ChatGPT API"],
-        },
-      ],
     },
-    {
+     {
       key: "model_name",
       title: "Model Name",
-      type: "text",
+      type: "select",
       required: false,
-      default: "gpt-4o-mini",
-      dependencies: [
-        {
-          key: "provider",
-          value: ["Gemini API", "ChatGPT API", "DeepSeek API"],
-        },
+      options: [
+        "gpt-4o-mini",
+        "gpt-4o",
+        "gpt-4-turbo",
+        "gpt-3.5-turbo",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "deepseek-chat",
+        "deepseek-coder"
       ],
+      default: "gpt-4o-mini"
     },
     {
       key: "translateto",
@@ -122,7 +119,7 @@ const builder = new addonBuilder({
     },
   ],
   description:
-    "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate (Free), Google Cloud Translation API, Gemini AI, ChatGPT (OpenAI Compatible), or DeepSeek API. Bug report: geanpn@gmail.com",
+    "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate (Free), Google Cloud Translation API, Gemini AI, ChatGPT (OpenAI Compatible), or DeepSeek API,
   types: ["series", "movie"],
   catalogs: [],
   resources: ["subtitles"],
