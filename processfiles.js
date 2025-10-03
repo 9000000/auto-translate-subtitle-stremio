@@ -28,7 +28,8 @@ class SubtitleProcessor {
     provider,
     apikey,
     base_url,
-    model_name
+    model_name,
+    batch_size
   ) {
     try {
       const originalSubtitleFilePath = filepath[0];
@@ -38,7 +39,7 @@ class SubtitleProcessor {
       );
       const lines = originalSubtitleContent.split("\n");
 
-      const batchSize = provider === "ChatGPT API" || provider === "DeepSeek API" ? 50 : 60;
+      const batchSize = batch_size;
       let subtitleBatch = [];
       let currentBlock = {
         iscount: true,
@@ -285,7 +286,8 @@ async function startTranslation(
   provider,
   apikey,
   base_url,
-  model_name
+  model_name,
+  batch_size
 ) {
   let filepaths = [];
   try {
@@ -317,7 +319,8 @@ async function startTranslation(
         provider,
         apikey,
         base_url,
-        model_name
+        model_name,
+        batch_size
       );
       return true;
     }

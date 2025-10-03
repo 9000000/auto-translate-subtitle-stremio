@@ -117,6 +117,13 @@ const builder = new addonBuilder({
       default: "gpt-4o-mini"
     },
     {
+      key: "batch_size",
+      title: "Batch Size (number of lines to translate at once)",
+      type: "number",
+      default: 60,
+      required: false,
+    },
+    {
       key: "translateto",
       title: "Translate to",
       type: "select",
@@ -382,6 +389,7 @@ builder.defineSubtitlesHandler(async function (args) {
       apikey: config.apikey ?? null,
       base_url: config.base_url ?? (config.provider === "DeepSeek API" ? "https://api.deepseek.com" : "https://api.openai.com/v1/responses"),
       model_name: config.model_name ?? defaultModelName,
+      batch_size: config.batch_size ?? 60,
     });
 
     console.log(
