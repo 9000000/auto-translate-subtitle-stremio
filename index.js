@@ -76,15 +76,9 @@ const builder = new addonBuilder({
     },
     {
       key: "apikey",
-      title: "API Key",
+      title: "API Key (required for Google API, Gemini API, ChatGPT API, DeepSeek API)",
       type: "text",
       required: false,
-      dependencies: [
-        {
-          key: "provider",
-          value: ["Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
-        },
-      ],
     },
     {
       key: "base_url",
