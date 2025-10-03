@@ -11,7 +11,6 @@ const translationQueue = require("./queues/translationQueue");
 const baseLanguages = require("./langs/base.lang.json");
 const isoCodeMapping = require("./langs/iso_code_mapping.json");
 const bodyParser = require('body-parser');
-const app = express(); // Nếu chưa có dòng này
 
 require("dotenv").config();
 
