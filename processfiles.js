@@ -5,7 +5,10 @@ const opensubtitles = require("./opensubtitles");
 const connection = require("./connection");
 const fs = require("fs").promises;
 const { translateText } = require("./translateProvider");
-const { createOrUpdateMessageSub } = require("./subtitles");
+const {
+  createOrUpdateMessageSub,
+  generateSubtitlePath,
+} = require("./subtitles");
 
 class SubtitleProcessor {
   constructor() {
@@ -218,20 +221,23 @@ class SubtitleProcessor {
   ) {
     try {
       // Define directory path based on content type and provider
-      const dirPath =
-        season !== null && episode !== null
-          ? `subtitles/${provider}/${oldisocode}/${imdbid}/season${season}`
-          : `subtitles/${provider}/${oldisocode}/${imdbid}`;
+      const newSubtitleFilePath = generateSubtitlePath(
+        provider,
+        oldisocode,
+        imdbid,
+        season,
+        episode
+      );
+      const dirPath = newSubtitleFilePath.substring(
+        0,
+        newSubtitleFilePath.lastIndexOf("/")
+      );
 
       // Create directory if it doesn't exist
       await fs.mkdir(dirPath, { recursive: true });
 
-      // Create file path and determine content type
+      // Determine content type
       const type = season && episode ? "series" : "movie";
-      const newSubtitleFilePath =
-        season && episode
-          ? `${dirPath}/${imdbid}-translated-${episode}-1.srt`
-          : `${dirPath}/${imdbid}-translated-1.srt`;
 
       // Build subtitle content
       const output = [];
