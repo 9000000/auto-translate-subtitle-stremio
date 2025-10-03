@@ -10,7 +10,11 @@ const { createOrUpdateMessageSub } = require("./subtitles");
 const translationQueue = require("./queues/translationQueue");
 const baseLanguages = require("./langs/base.lang.json");
 const isoCodeMapping = require("./langs/iso_code_mapping.json");
-
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
+const app = express(); // Nếu chưa có dòng này
 
 require("dotenv").config();
 
@@ -23,6 +27,26 @@ function generateSubtitleUrl(
   baseUrl = process.env.BASE_URL
 ) {
   return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
+}
+
+function getConfig() {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, 'config.json'));
+    return JSON.parse(raw);
+  } catch (e) {
+    return {
+      provider: 'Google Translate',
+      apikey: '',
+      base_url: '',
+      model_name: '',
+      translateto: [],
+      ai_translation: true,
+      save_cache: true,
+      char_limit: 2000,
+      quality: 'fast',
+      translate_mode: 'full'
+    };
+  }
 }
 
 function getLanguageDisplayName(isoCode, provider) {
@@ -464,8 +488,7 @@ requiredDirs.forEach(dir => {
   }
 });
 
-// Create Express app for custom routes
-const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve configuration page
 app.get('/configure', (req, res) => {
@@ -513,20 +536,13 @@ app.get('/configure', (req, res) => {
               <option>Chinese</option>
               <option>French</option>
               <option>German</option>
-              <!-- Có thể lấy danh sách từ file langs -->
             </select>
           </div>
           <div class="field">
-            <label>
-              <input type="checkbox" name="ai_translation" checked />
-              Sử dụng AI để dịch phụ đề
-            </label>
+            <label><input type="checkbox" name="ai_translation" checked /> Sử dụng AI để dịch phụ đề</label>
           </div>
           <div class="field">
-            <label>
-              <input type="checkbox" name="save_cache" checked />
-              Lưu cache bản dịch để tối ưu hiệu suất
-            </label>
+            <label><input type="checkbox" name="save_cache" checked /> Lưu cache bản dịch để tối ưu hiệu suất</label>
           </div>
           <div class="field">
             <label>Character Limit per session:</label>
@@ -556,6 +572,30 @@ app.get('/configure', (req, res) => {
       </body>
     </html>
   `);
+});
+
+app.post('/save-config', (req, res) => {
+  const configData = {
+    provider      : req.body.provider || '',
+    apikey        : req.body.apikey || '',
+    base_url      : req.body.base_url || '',
+    model_name    : req.body.model_name || '',
+    translateto   : req.body['translateto[]'] 
+                      ? (Array.isArray(req.body['translateto[]']) ? req.body['translateto[]'] : [req.body['translateto[]']]) 
+                      : [],
+    ai_translation: req.body.ai_translation ? true : false,
+    save_cache    : req.body.save_cache ? true : false,
+    char_limit    : req.body.char_limit ? parseInt(req.body.char_limit) : 2000,
+    quality       : req.body.quality || 'fast',
+    translate_mode: req.body.translate_mode || 'full'
+  };
+
+  fs.writeFile(path.join(__dirname, 'config.json'), JSON.stringify(configData, null, 2), err => {
+    if (err) {
+      return res.send('Có lỗi khi lưu cấu hình: ' + err.message);
+    }
+    res.send('<html><body><h3>Đã lưu cấu hình thành công!</h3><a href="/configure">Quay lại cấu hình</a></body></html>');
+  });
 });
 
 
