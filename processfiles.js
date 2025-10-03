@@ -35,7 +35,7 @@ class SubtitleProcessor {
       );
       const lines = originalSubtitleContent.split("\n");
 
-      const batchSize = provider === "ChatGPT API" ? 50 : 60;
+      const batchSize = provider === "ChatGPT API" || provider === "DeepSeek API" ? 50 : 60;
       let subtitleBatch = [];
       let currentBlock = {
         iscount: true,
@@ -67,11 +67,14 @@ class SubtitleProcessor {
                 provider,
                 apikey,
                 base_url,
-                model_name
+                model_name,
+                imdbid,
+                season,
+                episode
               );
               subtitleBatch = [];
             } catch (error) {
-              console.error("Batch translation error: ", error);
+              console.error("Batch translation error: ", error.message);
               throw error;
             }
           }
@@ -120,10 +123,13 @@ class SubtitleProcessor {
             provider,
             apikey,
             base_url,
-            model_name
+            model_name,
+            imdbid,
+            season,
+            episode
           );
         } catch (error) {
-          console.log("Subtitle batch error: ", error);
+          console.log("Subtitle batch error: ", error.message);
           throw error;
         }
       }
@@ -154,7 +160,10 @@ class SubtitleProcessor {
     provider,
     apikey,
     base_url,
-    model_name
+    model_name,
+    imdbid,
+    season,
+    episode
   ) {
     try {
       const translations = await translateText(
@@ -172,7 +181,30 @@ class SubtitleProcessor {
 
       console.log("Batch translation completed");
     } catch (error) {
-      console.error("Batch translation error:", error);
+      console.error("Batch translation error:", error.message);
+      
+      // Create error message subtitle for user
+      let errorMsg = "Translation failed. ";
+      if (error.message.includes("Insufficient Balance")) {
+        errorMsg += "API account has insufficient balance. Please top up your account.";
+      } else if (error.message.includes("invalid_api_key") || error.message.includes("unauthorized")) {
+        errorMsg += "Invalid API key. Please check your configuration.";
+      } else if (error.message.includes("quota_exceeded")) {
+        errorMsg += "API quota exceeded. Please wait or upgrade your plan.";
+      } else {
+        errorMsg += error.message;
+      }
+      
+      // Update subtitle with error message
+      await createOrUpdateMessageSub(
+        errorMsg,
+        imdbid,
+        season,
+        episode,
+        oldisocode,
+        provider
+      );
+      
       throw error;
     }
   }
@@ -285,7 +317,36 @@ async function startTranslation(
     }
     return false;
   } catch (error) {
-    console.error("General catch error:", error);
+    console.error("General catch error:", error.message);
+    
+    // Create user-friendly error message
+    let userMessage = "Translation failed. ";
+    if (error.message.includes("Insufficient Balance")) {
+      userMessage += "DeepSeek API account has insufficient balance. Please top up at https://platform.deepseek.com";
+    } else if (error.message.includes("invalid_api_key") || error.message.includes("unauthorized")) {
+      userMessage += "Invalid API key. Please check your addon configuration.";
+    } else if (error.message.includes("quota_exceeded")) {
+      userMessage += "API quota exceeded. Please wait or upgrade your plan.";
+    } else if (error.message.includes("rate_limit")) {
+      userMessage += "Rate limit exceeded. Please wait a moment and try again.";
+    } else {
+      userMessage += "Please check your configuration and try again.";
+    }
+    
+    // Update subtitle with error message
+    try {
+      await createOrUpdateMessageSub(
+        userMessage,
+        imdbid,
+        season,
+        episode,
+        oldisocode,
+        provider
+      );
+    } catch (msgError) {
+      console.error("Error creating error message subtitle:", msgError);
+    }
+    
     return false;
   } finally {
     // Cleanup: Delete downloaded original subtitle files
