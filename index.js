@@ -25,14 +25,7 @@ requiredDirs.forEach(dir => {
   }
 });
 
-function generateSubtitleUrl(
-  relativePath
-) {
-  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
-  return `${baseUrl}/${relativePath}`;
-}
-
-function generateSubtitleRelativePath(
+function generateSubtitlePaths(
   targetLanguage,
   imdbid,
   type,
@@ -40,10 +33,17 @@ function generateSubtitleRelativePath(
   episode,
   provider
 ) {
+  let relativePath;
   if (type === 'movie') {
-    return `subtitles/${provider}/${targetLanguage}/${imdbid}/${imdbid}-translated-1.srt`;
+    relativePath = `subtitles/${provider}/${targetLanguage}/${imdbid}/${imdbid}-translated-1.srt`;
+  } else {
+    relativePath = `subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
   }
-  return `subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
+
+  const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
+  const absoluteUrl = `${baseUrl}/${relativePath}`;
+
+  return { relativePath, absoluteUrl };
 }
 
 function getLanguageDisplayName(isoCode, provider) {
@@ -175,21 +175,19 @@ builder.defineSubtitlesHandler(async function (args) {
     return Promise.resolve({ subtitles: [] });
   }
 
+  const { relativePath, absoluteUrl } = generateSubtitlePaths(
+    targetLanguage,
+    imdbid,
+    type,
+    season,
+    episode,
+    config.provider
+  );
+  const subtitlePath = path.join(__dirname, relativePath);
+
   try {
-    const subtitleRelativePath = generateSubtitleRelativePath(
-        targetLanguage,
-        imdbid,
-        type,
-        season,
-        episode,
-        config.provider
-      );
-
-    const subtitleUrl = generateSubtitleUrl(subtitleRelativePath);
-    const subtitlePath = path.join(__dirname, subtitleRelativePath);
-
     if (fs.existsSync(subtitlePath)) {
-        console.log("Subtitle file exists locally:", subtitleRelativePath);
+        console.log("Subtitle file exists locally:", relativePath);
         const fileContent = fs.readFileSync(subtitlePath, 'utf-8');
         const isPlaceholder = fileContent.includes("Translating subtitles") ||
                              fileContent.includes("No subtitles found") ||
@@ -208,7 +206,7 @@ builder.defineSubtitlesHandler(async function (args) {
                     subtitles: [
                         {
                             id: `${imdbid}-${targetLanguage}-translating`,
-                            url: subtitleUrl,
+                            url: absoluteUrl,
                             lang: `${languageDisplayName} (Translating...)`,
                         },
                     ],
@@ -220,7 +218,7 @@ builder.defineSubtitlesHandler(async function (args) {
               subtitles: [
                 {
                   id: `${imdbid}-${targetLanguage}-subtitle`,
-                  url: subtitleUrl,
+                  url: absoluteUrl,
                   lang: languageDisplayName,
                 },
               ],
@@ -248,7 +246,7 @@ builder.defineSubtitlesHandler(async function (args) {
         subtitles: [
           {
             id: `${imdbid}-${targetLanguage}-no-subs`,
-            url: subtitleUrl,
+            url: absoluteUrl,
             lang: `${languageDisplayName} (Not Found)`,
           },
         ],
@@ -258,7 +256,6 @@ builder.defineSubtitlesHandler(async function (args) {
     const foundSubtitle = subs[0];
     const mappedFoundSubtitleLang = isoCodeMapping[foundSubtitle.lang] || foundSubtitle.lang;
 
-    // Optimization: If the subtitle is already in the target language, just download and serve it.
     if (mappedFoundSubtitleLang === targetLanguage) {
         console.log("Desired language subtitle found on OpenSubtitles, using it directly.");
 
@@ -271,13 +268,13 @@ builder.defineSubtitlesHandler(async function (args) {
         await fs.promises.rename(tempPath, subtitlePath);
         console.log(`Moved subtitle from ${tempPath} to ${subtitlePath}`);
 
-        await connection.addsubtitle(imdbid, type, season, episode, subtitleRelativePath, targetLanguage);
+        await connection.addsubtitle(imdbid, type, season, episode, relativePath, targetLanguage);
 
         return Promise.resolve({
             subtitles: [
                 {
                     id: `${imdbid}-${targetLanguage}-subtitle`,
-                    url: subtitleUrl,
+                    url: absoluteUrl,
                     lang: languageDisplayName,
                 },
             ],
@@ -309,7 +306,7 @@ builder.defineSubtitlesHandler(async function (args) {
       subtitles: [
         {
           id: `${imdbid}-${targetLanguage}-translating`,
-          url: subtitleUrl,
+          url: absoluteUrl,
           lang: `${languageDisplayName} (Translating...)`,
         },
       ],
