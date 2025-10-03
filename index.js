@@ -107,7 +107,7 @@ const builder = new addonBuilder({
         "gemini-1.5-flash",
         "gemini-1.5-pro",
         "deepseek-chat",
-        "deepseek-coder"
+        "deepseek-reasoner"
       ],
       default: "gpt-4o-mini"
     },
