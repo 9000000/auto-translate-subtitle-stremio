@@ -340,10 +340,12 @@ serveHTTP(builder.getInterface(), {
   static: "/subtitles",
 })
   .then(({ url }) => {
-    console.log(`Server started at: ${url}`);
-    console.log(`Manifest available at: ${url}/manifest.json`);
+    const displayAddress = address === '0.0.0.0' ? 'localhost' : address;
+    const serverUrl = `http://${displayAddress}:${port}`;
+    console.log(`Server started: ${serverUrl}`);
+    console.log(`Manifest available: ${serverUrl}/manifest.json`);
     if (process.env.PUBLISH_IN_STREMIO_STORE == "TRUE") {
-        publishToCentral(`${url}/manifest.json`);
+        publishToCentral(`${serverUrl}/manifest.json`);
     }
   })
   .catch((error) => {
