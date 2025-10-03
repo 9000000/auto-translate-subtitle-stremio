@@ -68,18 +68,7 @@ async function translateTextWithRetry(
         break;
       }
       case "Google API": {
-        const translate = new Translate({
-          key: apikey,
-        });
-
-        const translationPromises = texts.map(text => 
-          translate.translate(text, targetLanguage)
-        );
-
-        const translations = await Promise.all(translationPromises);
-        resultArray = translations.map(([translation]) => translation);
-        
-        console.log(`Google API translated ${resultArray.length} subtitle texts`);
+        resultArray = await translateGoogleFree(texts, targetLanguage);
         break;
       }
       case "Gemini API": {
