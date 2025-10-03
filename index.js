@@ -6,10 +6,7 @@ const {
 const opensubtitles = require("./opensubtitles");
 const connection = require("./connection");
 const languages = require("./languages");
-const {
-  createOrUpdateMessageSub,
-  generateSubtitlePath,
-} = require("./subtitles");
+const { createOrUpdateMessageSub } = require("./subtitles");
 const translationQueue = require("./queues/translationQueue");
 const baseLanguages = require("./langs/base.lang.json");
 const isoCodeMapping = require("./langs/iso_code_mapping.json");
@@ -25,18 +22,7 @@ function generateSubtitleUrl(
   provider,
   baseUrl = process.env.BASE_URL
 ) {
-  const subtitlePath = generateSubtitlePath(
-    provider,
-    targetLanguage,
-    imdbid,
-    season,
-    episode
-  );
-  if (baseUrl) {
-    const sanitizedBaseUrl = baseUrl.replace(/\/$/, "");
-    return `${sanitizedBaseUrl}/${subtitlePath}`;
-  }
-  return `/${subtitlePath}`;
+  return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
 }
 
 function getLanguageDisplayName(isoCode, provider) {
@@ -93,6 +79,12 @@ const builder = new addonBuilder({
       title: "API Key (required for Google API, Gemini API, ChatGPT API, DeepSeek API)",
       type: "text",
       required: false,
+      dependencies: [
+        {
+          key: "provider",
+          value: ["Gemini API", "ChatGPT API", "DeepSeek API"],
+        },
+      ],
     },
     {
       key: "base_url",
@@ -191,14 +183,8 @@ builder.defineSubtitlesHandler(async function (args) {
         config.provider
       );
 
-      const subtitlePath = generateSubtitlePath(
-        config.provider,
-        targetLanguage,
-        imdbid,
-        season,
-        episode
-      );
-      const fs = require("fs").promises;
+      const fs = require('fs').promises;
+      const subtitlePath = subtitleUrl.replace(`${process.env.BASE_URL}/`, '');
 
       try {
         await fs.access(subtitlePath);
@@ -289,19 +275,12 @@ builder.defineSubtitlesHandler(async function (args) {
       console.log(
         "Desired language subtitle found on OpenSubtitles, returning it directly."
       );
-      const subtitlePath = generateSubtitlePath(
-        config.provider,
-        targetLanguage,
-        imdbid,
-        season,
-        episode
-      );
       await connection.addsubtitle(
         imdbid,
         type,
         season,
         episode,
-        subtitlePath,
+        foundSubtitle.url.replace(`${process.env.BASE_URL}/`, ""),
         targetLanguage
       );
       return Promise.resolve({
@@ -403,19 +382,18 @@ builder.defineSubtitlesHandler(async function (args) {
       )
     );
 
-    const subtitlePath = generateSubtitlePath(
-      config.provider,
-      targetLanguage,
-      imdbid,
-      season,
-      episode
-    );
     await connection.addsubtitle(
       imdbid,
       type,
       season,
       episode,
-      subtitlePath,
+      generateSubtitleUrl(
+        targetLanguage,
+        imdbid,
+        season,
+        episode,
+        config.provider
+      ).replace(`${process.env.BASE_URL}/`, ""),
       targetLanguage
     );
 
@@ -452,7 +430,7 @@ function parseId(id) {
         episode: Number(episode),
       };
     } else {
-      return { type: "movie", season: null, episode: null };
+      return { type: "movie", season: 1, episode: 1 };
     }
   } else if (id.startsWith("dcool-")) {
     const match = id.match(/dcool-(.+)::(.+)-episode-(\d+)/);
