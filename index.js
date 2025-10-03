@@ -470,230 +470,94 @@ const app = express();
 // Serve configuration page
 app.get('/configure', (req, res) => {
   res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stremio Subtitle Translator - Configuration</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-    <div id="root"></div>
-    <script>
-        const { createElement: e, useState } = React;
-        
-        const baseLanguages = ${JSON.stringify(baseLanguages)};
-        
-        function ConfigurationApp() {
-            const [provider, setProvider] = useState('Google Translate');
-            const [apiKey, setApiKey] = useState('');
-            const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1/responses');
-            const [modelName, setModelName] = useState('gpt-4o-mini');
-            const [targetLanguage, setTargetLanguage] = useState('English');
-            const [installUrl, setInstallUrl] = useState('');
-            
-            const providers = [
-                'Google Translate',
-                'Google API',
-                'Gemini API',
-                'ChatGPT API',
-                'DeepSeek API'
-            ];
-            
-            const needsApiKey = ['Google API', 'Gemini API', 'ChatGPT API', 'DeepSeek API'].includes(provider);
-            const needsBaseUrl = provider === 'ChatGPT API';
-            const needsModelName = ['Gemini API', 'ChatGPT API', 'DeepSeek API'].includes(provider);
-            
-            const handleProviderChange = (e) => {
-                const newProvider = e.target.value;
-                setProvider(newProvider);
-                
-                // Set default values based on provider
-                if (newProvider === 'DeepSeek API') {
-                    setModelName('deepseek-chat');
-                    setBaseUrl('https://api.deepseek.com');
-                } else if (newProvider === 'Gemini API') {
-                    setModelName('gemini-1.5-flash');
-                } else if (newProvider === 'ChatGPT API') {
-                    setModelName('gpt-4o-mini');
-                    setBaseUrl('https://api.openai.com/v1/responses');
-                }
-            };
-            
-            const generateInstallUrl = () => {
-                const config = {
-                    provider: provider,
-                    translateto: targetLanguage
-                };
-                
-                if (needsApiKey && apiKey) {
-                    config.apikey = apiKey;
-                }
-                
-                if (needsBaseUrl && baseUrl) {
-                    config.base_url = baseUrl;
-                }
-                
-                if (needsModelName && modelName) {
-                    config.model_name = modelName;
-                }
-                
-                const configStr = btoa(JSON.stringify(config));
-                const url = window.location.origin + '/' + configStr + '/manifest.json';
-                setInstallUrl(url);
-            };
-            
-            const copyToClipboard = () => {
-                navigator.clipboard.writeText(installUrl);
-                alert('URL copied to clipboard!');
-            };
-            
-            return e('div', { className: 'container mx-auto px-4 py-8 max-w-2xl' },
-                e('div', { className: 'bg-white rounded-lg shadow-lg p-6' },
-                    e('h1', { className: 'text-3xl font-bold text-gray-800 mb-2' }, 
-                        'Stremio Subtitle Translator'
-                    ),
-                    e('p', { className: 'text-gray-600 mb-6' },
-                        'Configure your subtitle translation settings'
-                    ),
-                    
-                    // Provider Selection
-                    e('div', { className: 'mb-4' },
-                        e('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-                            'Translation Provider *'
-                        ),
-                        e('select', {
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            value: provider,
-                            onChange: handleProviderChange
-                        }, providers.map(p => e('option', { key: p, value: p }, p)))
-                    ),
-                    
-                    // API Key (conditional)
-                    needsApiKey && e('div', { className: 'mb-4' },
-                        e('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-                            'API Key *'
-                        ),
-                        e('input', {
-                            type: 'password',
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            value: apiKey,
-                            onChange: (e) => setApiKey(e.target.value),
-                            placeholder: 'Enter your API key'
-                        }),
-                        e('p', { className: 'text-xs text-gray-500 mt-1' },
-                            provider === 'Google API' ? 'Get your key from Google Cloud Console' :
-                            provider === 'Gemini API' ? 'Get your free key from https://aistudio.google.com/apikey' :
-                            provider === 'ChatGPT API' ? 'Get your key from OpenAI Platform' :
-                            provider === 'DeepSeek API' ? 'Get your key from https://platform.deepseek.com' : ''
-                        )
-                    ),
-                    
-                    // Base URL (conditional)
-                    needsBaseUrl && e('div', { className: 'mb-4' },
-                        e('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-                            'API Base URL'
-                        ),
-                        e('input', {
-                            type: 'text',
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            value: baseUrl,
-                            onChange: (e) => setBaseUrl(e.target.value),
-                            placeholder: 'https://api.openai.com/v1/responses'
-                        }),
-                        e('p', { className: 'text-xs text-gray-500 mt-1' },
-                            'For OpenAI compatible APIs (OpenRouter, Gemini via OpenAI, etc.)'
-                        )
-                    ),
-                    
-                    // Model Name (conditional)
-                    needsModelName && e('div', { className: 'mb-4' },
-                        e('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-                            'Model Name'
-                        ),
-                        e('input', {
-                            type: 'text',
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            value: modelName,
-                            onChange: (e) => setModelName(e.target.value),
-                            placeholder: provider === 'DeepSeek API' ? 'deepseek-chat' : 
-                                       provider === 'Gemini API' ? 'gemini-1.5-flash' : 
-                                       'gpt-4o-mini'
-                        })
-                    ),
-                    
-                    // Target Language
-                    e('div', { className: 'mb-6' },
-                        e('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-                            'Translate To *'
-                        ),
-                        e('select', {
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                            value: targetLanguage,
-                            onChange: (e) => setTargetLanguage(e.target.value)
-                        }, baseLanguages.map(lang => e('option', { key: lang, value: lang }, lang)))
-                    ),
-                    
-                    // Generate Button
-                    e('button', {
-                        className: 'w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium transition-colors',
-                        onClick: generateInstallUrl
-                    }, 'Generate Install URL'),
-                    
-                    // Install URL Display
-                    installUrl && e('div', { className: 'mt-6 p-4 bg-gray-50 rounded-md' },
-                        e('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
-                            'Installation URL'
-                        ),
-                        e('div', { className: 'flex gap-2' },
-                            e('input', {
-                                type: 'text',
-                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-md bg-white',
-                                value: installUrl,
-                                readOnly: true
-                            }),
-                            e('button', {
-                                className: 'px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500',
-                                onClick: copyToClipboard
-                            }, 'Copy')
-                        ),
-                        e('p', { className: 'text-sm text-gray-600 mt-3' },
-                            'Copy this URL and paste it in Stremio > Addons > Community Addons to install.'
-                        ),
-                        e('a', {
-                            href: installUrl,
-                            className: 'inline-block mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-center',
-                            target: '_blank'
-                        }, 'Open in Stremio')
-                    ),
-                    
-                    // Info Box
-                    e('div', { className: 'mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded' },
-                        e('h3', { className: 'font-semibold text-blue-900 mb-2' }, 
-                            'Provider Recommendations:'
-                        ),
-                        e('ul', { className: 'text-sm text-blue-800 space-y-1' },
-                            e('li', null, '• Google Translate: Free, no API key needed (may be slow)'),
-                            e('li', null, '• Gemini API: FREE with 1500 requests/day (Recommended!)'),
-                            e('li', null, '• DeepSeek API: Very affordable, high quality'),
-                            e('li', null, '• ChatGPT API: Good quality, requires paid OpenAI account'),
-                            e('li', null, '• Google API: Professional, $20/month with 500K chars free')
-                        )
-                    )
-                )
-            );
-        }
-        
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(ConfigurationApp));
-    </script>
-</body>
-</html>
+    <html>
+      <head>
+        <title>Stremio Subtitle Translator - Configuration</title>
+        <style>
+          body { font-family: Arial; padding: 2em; }
+          label { font-weight: bold; }
+          input, select { margin-bottom: 1em; width: 300px; padding: 5px; }
+          .field { margin-bottom: 12px; }
+        </style>
+      </head>
+      <body>
+        <h2>Addon Configuration</h2>
+        <form method="POST" action="/save-config">
+          <div class="field">
+            <label>Provider:</label>
+            <select name="provider">
+              <option>Google Translate</option>
+              <option>Google API</option>
+              <option>Gemini API</option>
+              <option>ChatGPT API</option>
+              <option>DeepSeek API</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>API Key:</label>
+            <input type="text" name="apikey" placeholder="Optional (required for some providers)" />
+          </div>
+          <div class="field">
+            <label>API Base URL:</label>
+            <input type="text" name="base_url" placeholder="https://api.openai.com/v1/responses"/>
+          </div>
+          <div class="field">
+            <label>Model Name:</label>
+            <input type="text" name="model_name" placeholder="gpt-4o-mini, deepseek-chat, gemini-1.5-flash"/>
+          </div>
+          <div class="field">
+            <label>Target Languages:</label>
+            <select name="translateto[]" multiple>
+              <option>English</option>
+              <option>Vietnamese</option>
+              <option>Chinese</option>
+              <option>French</option>
+              <option>German</option>
+              <!-- Có thể lấy danh sách từ file langs -->
+            </select>
+          </div>
+          <div class="field">
+            <label>
+              <input type="checkbox" name="ai_translation" checked />
+              Sử dụng AI để dịch phụ đề
+            </label>
+          </div>
+          <div class="field">
+            <label>
+              <input type="checkbox" name="save_cache" checked />
+              Lưu cache bản dịch để tối ưu hiệu suất
+            </label>
+          </div>
+          <div class="field">
+            <label>Character Limit per session:</label>
+            <input type="number" name="char_limit" value="2000" min="100" />
+          </div>
+          <div class="field">
+            <label>Quality:</label>
+            <select name="quality">
+              <option value="fast">Nhanh</option>
+              <option value="accurate">Chính xác</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Translation Mode:</label>
+            <select name="translate_mode">
+              <option value="full">Dịch toàn bộ file</option>
+              <option value="keyword">Chỉ dịch dòng chứa keyword</option>
+            </select>
+          </div>
+          <div class="field">
+            <button type="submit">Lưu cấu hình</button>
+          </div>
+        </form>
+        <hr />
+        <a href="/history">Xem lịch sử bản dịch</a>
+        <a href="/statistics">Thống kê sử dụng</a>
+      </body>
+    </html>
   `);
 });
+
 
 serveHTTP(builder.getInterface(), {
   cacheMaxAge: 10,
