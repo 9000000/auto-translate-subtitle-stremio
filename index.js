@@ -81,7 +81,7 @@ const builder = new addonBuilder({
   id: "org.autotranslate.geanpn",
   version: "1.0.7",
   name: "Auto Subtitle Translate by geanpn",
-  logo: "/logo.webp", // Served from static path
+  logo: "/subtitles/logo.webp",
   configurable: true,
   behaviorHints: {
     configurable: true,
@@ -337,7 +337,7 @@ const address = process.env.ADDRESS || "0.0.0.0";
 serveHTTP(builder.getInterface(), {
   port: port,
   address: address,
-  static: "/subtitles",
+  static: "./",
 })
   .then(({ url }) => {
     const displayAddress = address === '0.0.0.0' ? 'localhost' : address;
