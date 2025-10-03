@@ -76,7 +76,7 @@ const builder = new addonBuilder({
     },
     {
       key: "apikey",
-      title: "API Key (required for Google API, Gemini API, ChatGPT API, DeepSeek API)",
+      title: "API Key",
       type: "text",
       required: false,
       dependencies: [
@@ -102,7 +102,8 @@ const builder = new addonBuilder({
         "gpt-4o",
         "gpt-4-turbo",
         "gpt-3.5-turbo",
-        "gemini-2.0-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
         "deepseek-chat",
         "deepseek-reasoner"
       ],
@@ -355,7 +356,7 @@ builder.defineSubtitlesHandler(async function (args) {
     if (config.provider === "DeepSeek API") {
       defaultModelName = "deepseek-chat";
     } else if (config.provider === "Gemini API") {
-      defaultModelName = "gemini-2.0-flash-lite";
+      defaultModelName = "gemini-2.5-flash";
     }
 
     translationQueue.push({
