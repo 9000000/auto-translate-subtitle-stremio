@@ -104,8 +104,6 @@ const builder = new addonBuilder({
         "gpt-3.5-turbo",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
         "deepseek-chat",
         "deepseek-reasoner"
       ],
