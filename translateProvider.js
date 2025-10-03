@@ -8,44 +8,42 @@ var count = 0;
 
 // Direct Google Translate (unofficial API) - No library needed
 async function translateGoogleFree(texts, targetLanguage) {
-  const textToTranslate = texts.join(" ||| ");
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(textToTranslate)}`;
-  
-  try {
-    const response = await axios.get(url, {
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    
-    let translatedText = '';
-    if (response.data && response.data[0]) {
-      response.data[0].forEach(element => {
-        if (element && element[0]) {
-          translatedText += element[0];
+  const CHUNK_SIZE = 15; // Process 15 lines at a time to avoid URL length limit
+  let allTranslatedTexts = [];
+
+  for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
+    const chunk = texts.slice(i, i + CHUNK_SIZE);
+    if (chunk.length === 0) continue;
+
+    const textToTranslate = chunk.join(" ||| ");
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(textToTranslate)}`;
+
+    try {
+      const response = await axios.get(url, {
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
-    }
-    
-    const resultArray = translatedText.split('|||').map(t => t.trim());
-    
-    if (texts.length !== resultArray.length && resultArray.length > 0) {
-      console.log('Google Free: Text count mismatch', texts.length, resultArray.length);
-      const diff = texts.length - resultArray.length;
-      if (diff > 0) {
-        const splitted = resultArray[0].split(' ');
-        if (splitted.length === diff + 1) {
-          return [...splitted, ...resultArray.slice(1)];
-        }
+
+      let translatedText = '';
+      if (response.data && response.data[0]) {
+        response.data[0].forEach(element => {
+          if (element && element[0]) {
+            translatedText += element[0];
+          }
+        });
       }
+
+      const translatedChunk = translatedText.split('|||').map(t => t.trim());
+      allTranslatedTexts.push(...translatedChunk);
+    } catch (error) {
+      console.error(`Google Free API error on chunk starting at index ${i}:`, error.message);
+      throw error; // Propagate error to be handled by the retry logic in translateTextWithRetry
     }
-    
-    return resultArray;
-  } catch (error) {
-    console.error('Google Free API error:', error.message);
-    throw error;
   }
+
+  return allTranslatedTexts;
 }
 
 async function translateTextWithRetry(
@@ -75,7 +73,7 @@ async function translateTextWithRetry(
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apikey);
         const model = genAI.getGenerativeModel({ 
-          model: model_name || "gemini-2.0-flash-lite"
+          model: model_name || "gemini-2.5-flash"
         });
 
         // Create JSON input
