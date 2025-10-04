@@ -33,11 +33,13 @@ class SubtitleProcessor {
   ) {
     try {
       const originalSubtitleFilePath = filepath[0];
+      console.log(`[ProcessFiles] Reading original subtitle file: ${originalSubtitleFilePath}`);
       const originalSubtitleContent = await fs.readFile(
         originalSubtitleFilePath,
         { encoding: "utf-8" }
       );
       const lines = originalSubtitleContent.split("\n");
+      console.log(`[ProcessFiles] File has ${lines.length} lines. Starting to process in batches.`);
 
       const batchSize = batch_size;
       let subtitleBatch = [];
@@ -65,6 +67,7 @@ class SubtitleProcessor {
           // Translate when batch size is reached
           if (subtitleBatch.length === batchSize) {
             try {
+              console.log(`[ProcessFiles] Translating a batch of ${subtitleBatch.length} lines.`);
               await this.translateBatch(
                 subtitleBatch,
                 oldisocode,
@@ -121,6 +124,7 @@ class SubtitleProcessor {
       if (subtitleBatch.length > 0) {
         try {
           subtitleBatch.push(this.texts[this.texts.length - 1]);
+          console.log(`[ProcessFiles] Translating the final batch of ${subtitleBatch.length} lines.`);
           await this.translateBatch(
             subtitleBatch,
             oldisocode,
@@ -170,6 +174,7 @@ class SubtitleProcessor {
     episode
   ) {
     try {
+      console.log(`[ProcessFiles] Calling translateText provider: ${provider}, model: ${model_name}`);
       const translations = await translateText(
         subtitleBatch,
         oldisocode,
@@ -289,9 +294,11 @@ async function startTranslation(
   model_name,
   batch_size
 ) {
+  console.log(`[ProcessFiles] Starting translation for ${imdbid} S${season}E${episode} to ${oldisocode}`);
   let filepaths = [];
   try {
     const processor = new SubtitleProcessor();
+    console.log("[ProcessFiles] Downloading original subtitles...");
     filepaths = await opensubtitles.downloadSubtitles(
       subtitles,
       imdbid,
@@ -299,8 +306,10 @@ async function startTranslation(
       episode,
       oldisocode
     );
+    console.log(`[ProcessFiles] Downloaded subtitles to: ${filepaths.join(", ")}`);
 
     if (filepaths && filepaths.length > 0) {
+      console.log("[ProcessFiles] Adding task to translation queue in DB.");
       await connection.addToTranslationQueue(
         imdbid,
         season,
@@ -310,6 +319,7 @@ async function startTranslation(
         provider,
         apikey
       );
+      console.log("[ProcessFiles] Starting subtitle processing.");
       await processor.processSubtitles(
         filepaths,
         imdbid,
@@ -322,8 +332,10 @@ async function startTranslation(
         model_name,
         batch_size
       );
+      console.log(`[ProcessFiles] Successfully finished processing for ${imdbid} S${season}E${episode}.`);
       return true;
     }
+    console.log("[ProcessFiles] No subtitle file paths returned from download, aborting.");
     return false;
   } catch (error) {
     console.error("General catch error:", error.message);
