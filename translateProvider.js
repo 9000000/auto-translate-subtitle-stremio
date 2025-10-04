@@ -103,11 +103,15 @@ ${JSON.stringify(jsonInput)}`;
         // Clean response (remove markdown code blocks if present)
         responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         
-        const translatedJson = JSON.parse(responseText);
-
-        resultArray = translatedJson.texts
-          .sort((a, b) => a.index - b.index)
-          .map((item) => item.text);
+        try {
+          const translatedJson = JSON.parse(responseText);
+          resultArray = translatedJson.texts
+            .sort((a, b) => a.index - b.index)
+            .map((item) => item.text);
+        } catch (e) {
+          console.error("Failed to parse Gemini API response JSON:", responseText);
+          throw new Error("Invalid JSON response from Gemini API.");
+        }
 
         console.log(`Gemini API translated ${resultArray.length} subtitle texts`);
         break;
