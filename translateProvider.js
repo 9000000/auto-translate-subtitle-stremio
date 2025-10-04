@@ -109,7 +109,6 @@ ${JSON.stringify(jsonInput)}`;
             .sort((a, b) => a.index - b.index)
             .map((item) => item.text);
         } catch (e) {
-          console.error("Failed to parse Gemini API response JSON:", responseText);
           throw new Error("Invalid JSON response from Gemini API.");
         }
 
