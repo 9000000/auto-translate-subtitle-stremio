@@ -198,12 +198,14 @@ builder.defineSubtitlesHandler(async function (args) {
         
         if (isPlaceholder) {
           console.log("Subtitle is still a placeholder, checking translation status...");
+          console.log(`Calling checkForTranslation with: imdbid=${imdbid}, season=${season}, episode=${episode}, lang=${targetLanguage}`);
           const isInQueue = await connection.checkForTranslation(
             imdbid,
             season,
             episode,
             targetLanguage
           );
+          console.log(`checkForTranslation returned: ${isInQueue}`);
           
           if (isInQueue !== false) {
             return Promise.resolve({
@@ -306,12 +308,14 @@ builder.defineSubtitlesHandler(async function (args) {
       "Subtitles found on OpenSubtitles, but not in target language. Translating..."
     );
 
+    console.log(`Calling checkForTranslation with: imdbid=${imdbid}, season=${season}, episode=${episode}, lang=${targetLanguage}`);
     const isInQueue = await connection.checkForTranslation(
       imdbid,
       season,
       episode,
       targetLanguage
     );
+    console.log(`checkForTranslation returned: ${isInQueue}`);
     
     if (isInQueue !== false) {
       console.log("Translation already in progress");
