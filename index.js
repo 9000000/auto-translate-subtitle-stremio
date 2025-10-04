@@ -431,7 +431,8 @@ function parseId(id) {
         episode: Number(episode),
       };
     } else {
-      return { type: "movie", season: 1, episode: 1 };
+      // It's a movie
+      return { type: "movie", season: null, episode: null };
     }
   } else if (id.startsWith("dcool-")) {
     const match = id.match(/dcool-(.+)::(.+)-episode-(\d+)/);
