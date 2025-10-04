@@ -194,7 +194,9 @@ class SubtitleProcessor {
       
       // Create error message subtitle for user
       let errorMsg = "Translation failed. ";
-      if (error.message.includes("Insufficient Balance")) {
+      if (error.message.includes("fetch failed")) {
+        errorMsg += "Could not connect to the translation API. Please check your network connection and try again.";
+      } else if (error.message.includes("Insufficient Balance")) {
         errorMsg += "API account has insufficient balance. Please top up your account.";
       } else if (error.message.includes("invalid_api_key") || error.message.includes("unauthorized")) {
         errorMsg += "Invalid API key. Please check your configuration.";
@@ -342,8 +344,10 @@ async function startTranslation(
     
     // Create user-friendly error message
     let userMessage = "Translation failed. ";
-    if (error.message.includes("Insufficient Balance")) {
-      userMessage += "DeepSeek API account has insufficient balance. Please top up at https://platform.deepseek.com";
+    if (error.message.includes("fetch failed")) {
+      userMessage += "Could not connect to the translation API. Please check your network connection and try again.";
+    } else if (error.message.includes("Insufficient Balance")) {
+      userMessage += "API account has insufficient balance. Please top up your account.";
     } else if (error.message.includes("invalid_api_key") || error.message.includes("unauthorized")) {
       userMessage += "Invalid API key. Please check your addon configuration.";
     } else if (error.message.includes("quota_exceeded")) {
@@ -351,7 +355,7 @@ async function startTranslation(
     } else if (error.message.includes("rate_limit")) {
       userMessage += "Rate limit exceeded. Please wait a moment and try again.";
     } else {
-      userMessage += "Please check your configuration and try again.";
+      userMessage += "An unexpected error occurred. Please check logs for details.";
     }
     
     // Update subtitle with error message
