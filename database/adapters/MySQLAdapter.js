@@ -119,12 +119,28 @@ class MySQLAdapter extends BaseAdapter {
 
   async checkForTranslation(imdbid, season = null, episode = null, langcode) {
     try {
-      const result = await this.query(
-        "SELECT COUNT(*) AS count,subcount FROM translation_queue WHERE series_imdbid =? AND series_seasonno = ? AND series_episodeno = ? AND langcode = ?",
-        [imdbid, season, episode, langcode]
-      );
+      let querySql = "SELECT COUNT(*) AS count, subcount FROM translation_queue WHERE series_imdbid = ? AND langcode = ?";
+      const params = [imdbid, langcode];
+
+      if (season !== null && episode !== null) {
+        querySql += " AND series_seasonno = ? AND series_episodeno = ?";
+        params.push(season, episode);
+      } else {
+        querySql += " AND series_seasonno IS NULL AND series_episodeno IS NULL";
+      }
+
+      console.log("Executing checkForTranslation query (MySQL):", querySql, params);
+      const result = await this.query(querySql, params);
+
+      if (!result || result.length === 0) {
+        console.log("No translation queue entry found (MySQL).");
+        return false;
+      }
+
       const count = result[0].count;
       const subcount = result[0].subcount;
+
+      console.log(`Translation check for ${imdbid} S${season}E${episode} [${langcode}] (MySQL): Found ${count} entries, subcount: ${subcount}`);
 
       if (count > 0) {
         return subcount;
@@ -132,7 +148,8 @@ class MySQLAdapter extends BaseAdapter {
         return false;
       }
     } catch (error) {
-      console.error("Translation check error:", error.message);
+      console.error("Translation check error (MySQL):", error.message);
+      return false; // Ensure false is returned on error
     }
   }
 
