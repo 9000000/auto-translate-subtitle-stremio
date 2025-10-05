@@ -47,6 +47,9 @@ function getLanguageDisplayName(isoCode, provider) {
     case "Google Translate":
       langMap = googleLanguages;
       break;
+    case "Google API":
+      langMap = googleApiLanguages;
+      break;
     case "Gemini API":
       langMap = geminiLanguages;
       break;
@@ -79,8 +82,7 @@ const builder = new addonBuilder({
       title: "Provider",
       type: "select",
       required: true,
-      options: ["Google Translate", "Gemini API", "ChatGPT API", "DeepSeek API"],
-    },
+      options: ["Google Translate", "Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
     {
       key: "apikey",
       title: "API Key",
