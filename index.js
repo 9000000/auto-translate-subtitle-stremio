@@ -6,7 +6,10 @@ const {
 const opensubtitles = require("./opensubtitles");
 const connection = require("./connection");
 const languages = require("./languages");
-const { createOrUpdateMessageSub } = require("./subtitles");
+const {
+  createOrUpdateMessageSub,
+  generateSubtitlePath,
+} = require("./subtitles");
 const translationQueue = require("./queues/translationQueue");
 const baseLanguages = require("./langs/base.lang.json");
 const isoCodeMapping = require("./langs/iso_code_mapping.json");
@@ -22,7 +25,14 @@ function generateSubtitleUrl(
   provider,
   baseUrl = process.env.BASE_URL
 ) {
-  return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
+  const subtitlePath = generateSubtitlePath(
+    provider,
+    targetLanguage,
+    imdbid,
+    season,
+    episode
+  );
+  return `${baseUrl}/${subtitlePath}`;
 }
 
 function getLanguageDisplayName(isoCode, provider) {
@@ -36,9 +46,6 @@ function getLanguageDisplayName(isoCode, provider) {
   switch (provider) {
     case "Google Translate":
       langMap = googleLanguages;
-      break;
-    case "Google API":
-      langMap = googleApiLanguages;
       break;
     case "Gemini API":
       langMap = geminiLanguages;
@@ -72,7 +79,7 @@ const builder = new addonBuilder({
       title: "Provider",
       type: "select",
       required: true,
-      options: ["Google Translate", "Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
+      options: ["Google Translate", "Gemini API", "ChatGPT API", "DeepSeek API"],
     },
     {
       key: "apikey",

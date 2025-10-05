@@ -65,10 +65,6 @@ async function translateTextWithRetry(
         resultArray = await translateGoogleFree(texts, targetLanguage);
         break;
       }
-      case "Google API": {
-        resultArray = await translateGoogleFree(texts, targetLanguage);
-        break;
-      }
       case "Gemini API": {
         // Initialize Gemini
         const genAI = new GoogleGenerativeAI(apikey);
