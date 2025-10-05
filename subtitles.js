@@ -1,7 +1,13 @@
 const fs = require("fs").promises;
 
 function generateSubtitlePath(provider, oldisocode, imdbid, season, episode) {
-  if (season !== null && episode !== null) {
+  // Robustly check for a series. A series must have numeric season/episode.
+  // This handles cases where season/episode might be null, undefined, or the string "null".
+  const isSeries =
+    typeof season === "number" &&
+    typeof episode === "number";
+
+  if (isSeries) {
     // Series path
     return `subtitles/${provider}/${oldisocode}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
   } else {
