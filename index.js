@@ -83,6 +83,7 @@ const builder = new addonBuilder({
       type: "select",
       required: true,
       options: ["Google Translate", "Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
+    },
     {
       key: "apikey",
       title: "API Key",
