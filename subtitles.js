@@ -1,10 +1,11 @@
 const fs = require("fs").promises;
 
 function generateSubtitlePath(provider, oldisocode, imdbid, season, episode) {
-  // Robustly check for a series. A series must have numeric season/episode.
-  // This handles cases where season/episode might be null, undefined, or the string "null".
+  // A series must have a numeric season number greater than 0.
+  // This correctly handles all movie cases, including season=0, season=null, or season="null".
   const isSeries =
     typeof season === "number" &&
+    season > 0 &&
     typeof episode === "number";
 
   if (isSeries) {
