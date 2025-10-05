@@ -342,23 +342,31 @@ async function startTranslation(
   } catch (error) {
     console.error("General catch error:", error.message);
     
-    // Create user-friendly error message
+    // ===== PHẦN MỚI: Tạo thông báo lỗi thân thiện cho user =====
     let userMessage = "Translation failed. ";
-    if (error.message.includes("fetch failed")) {
+    
+    // Kiểm tra các loại lỗi khác nhau
+    if (error.message.includes("520") || error.message.includes("Request failed")) {
+      userMessage += "Could not download subtitles from OpenSubtitles. The server may be temporarily unavailable. Please try again in a few minutes.";
+    } else if (error.message.includes("timeout") || error.message.includes("ETIMEDOUT")) {
+      userMessage += "Download timeout. Please check your network connection and try again.";
+    } else if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
       userMessage += "Could not connect to the translation API. Please check your network connection and try again.";
     } else if (error.message.includes("Insufficient Balance")) {
       userMessage += "API account has insufficient balance. Please top up your account.";
-    } else if (error.message.includes("invalid_api_key") || error.message.includes("unauthorized")) {
-      userMessage += "Invalid API key. Please check your addon configuration.";
-    } else if (error.message.includes("quota_exceeded")) {
-      userMessage += "API quota exceeded. Please wait or upgrade your plan.";
-    } else if (error.message.includes("rate_limit")) {
-      userMessage += "Rate limit exceeded. Please wait a moment and try again.";
+    } else if (error.message.includes("invalid_api_key") || error.message.includes("unauthorized") || error.message.includes("API key")) {
+      userMessage += "Invalid or missing API key. Please check your addon configuration.";
+    } else if (error.message.includes("quota_exceeded") || error.message.includes("rate_limit")) {
+      userMessage += "API quota or rate limit exceeded. Please wait a moment and try again.";
+    } else if (error.message.includes("ENOTFOUND")) {
+      userMessage += "Could not reach the server. Please check your internet connection.";
+    } else if (error.message.includes("No subtitles found")) {
+      userMessage += "No subtitles available for this content on OpenSubtitles.";
     } else {
-      userMessage += "An unexpected error occurred. Please check logs for details.";
+      userMessage += "An unexpected error occurred. Please try again later or contact support.";
     }
     
-    // Update subtitle with error message
+    // Tạo file subtitle với thông báo lỗi
     try {
       await createOrUpdateMessageSub(
         userMessage,
@@ -368,9 +376,11 @@ async function startTranslation(
         oldisocode,
         provider
       );
+      console.log("[ProcessFiles] Error message subtitle created for user.");
     } catch (msgError) {
       console.error("Error creating error message subtitle:", msgError);
     }
+    // ===== HẾT PHẦN MỚI =====
     
     return false;
   } finally {
