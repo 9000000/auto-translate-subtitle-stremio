@@ -6,7 +6,10 @@ const {
 const opensubtitles = require("./opensubtitles");
 const connection = require("./connection");
 const languages = require("./languages");
-const { createOrUpdateMessageSub } = require("./subtitles");
+const {
+  createOrUpdateMessageSub,
+  generateSubtitlePath,
+} = require("./subtitles");
 const translationQueue = require("./queues/translationQueue");
 const baseLanguages = require("./langs/base.lang.json");
 const isoCodeMapping = require("./langs/iso_code_mapping.json");
@@ -22,7 +25,14 @@ function generateSubtitleUrl(
   provider,
   baseUrl = process.env.BASE_URL
 ) {
-  return `${baseUrl}/subtitles/${provider}/${targetLanguage}/${imdbid}/season${season}/${imdbid}-translated-${episode}-1.srt`;
+  const subtitlePath = generateSubtitlePath(
+    provider,
+    targetLanguage,
+    imdbid,
+    season,
+    episode
+  );
+  return `${baseUrl}/${subtitlePath}`;
 }
 
 function getLanguageDisplayName(isoCode, provider) {
