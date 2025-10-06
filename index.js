@@ -1,6 +1,10 @@
+const express = require("express");
+const path = require("path");
+const fs = require("fs");
+const http = require("http");
 const {
   addonBuilder,
-  serveHTTP,
+  getRouter,
   publishToCentral,
 } = require("stremio-addon-sdk");
 const opensubtitles = require("./opensubtitles");
@@ -76,66 +80,6 @@ const builder = new addonBuilder({
     configurable: true,
     configurationRequired: true,
   },
-  config: [
-    {
-      key: "provider",
-      title: "Provider",
-      type: "select",
-      required: true,
-      options: ["Google Translate", "Google API", "Gemini API", "ChatGPT API", "DeepSeek API"],
-    },
-    {
-      key: "apikey",
-      title: "API Key",
-      type: "text",
-      required: false,
-      dependencies: [
-        {
-          key: "provider",
-          value: ["Gemini API", "ChatGPT API", "DeepSeek API"],
-        },
-      ],
-    },
-    {
-      key: "base_url",
-      title: "API Base URL (for ChatGPT/Deepseek compatible)",
-      type: "text",
-      required: false,
-    },
-     {
-      key: "model_name",
-      title: "Model Name",
-      type: "select",
-      required: false,
-      options: [
-        "gpt-4o-mini",
-        "gpt-4o",
-        "gpt-4-turbo",
-        "gpt-3.5-turbo",
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash-lite",
-        "deepseek-chat",
-        "deepseek-reasoner"
-      ],
-      default: "gpt-4o-mini"
-    },
-    {
-      key: "batch_size",
-      title: "Batch Size (number of lines to translate at once)",
-      type: "number",
-      default: 60,
-      required: false,
-    },
-    {
-      key: "translateto",
-      title: "Translate to",
-      type: "select",
-      required: true,
-      default: "English",
-      options: baseLanguages,
-    },
-  ],
   description:
     "This addon takes subtitles from OpenSubtitlesV3 then translates into desired language using Google Translate (Free), Google Cloud Translation API, Gemini AI, ChatGPT (OpenAI Compatible), or DeepSeek API",
   types: ["series", "movie"],
@@ -468,22 +412,49 @@ if (process.env.PUBLISH_IN_STREMIO_STORE == "TRUE") {
   publishToCentral(`http://${process.env.ADDRESS}/manifest.json`);
 }
 
-const port = process.env.PORT || 3000;
-const address = process.env.ADDRESS || "0.0.0.0";
+const app = express();
 
-serveHTTP(builder.getInterface(), {
-  cacheMaxAge: 10,
-  port: port,
-  address: address,
-  static: "/subtitles",
-})
-  .then(() => {
-    console.log(`Server started: http://${address}:${port}`);
-    console.log(
-      "Manifest available:",
-      `http://${address}:${port}/manifest.json`
-    );
-  })
-  .catch((error) => {
-    console.error("Server startup error:", error);
-  });
+// Serve static files from 'dist' and 'subtitles'
+app.use("/assets", express.static(path.join(__dirname, "dist", "assets")));
+app.use("/subtitles", express.static("subtitles"));
+
+// API and UI routes
+app.use(express.json());
+
+const configPath = path.join(__dirname, "config.json");
+
+app.get("/get-config", (req, res) => {
+  if (fs.existsSync(configPath)) {
+    res.json(JSON.parse(fs.readFileSync(configPath, "utf-8")));
+  } else {
+    res.json({});
+  }
+});
+
+app.get("/get-languages", (req, res) => {
+  res.json(baseLanguages);
+});
+
+app.post("/save-config", (req, res) => {
+  fs.writeFileSync(configPath, JSON.stringify(req.body, null, 2));
+  res.status(200).send("Configuration saved");
+});
+
+app.get("/configure", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/", (req, res) => {
+  res.redirect("/configure");
+});
+
+// Stremio addon router
+const addonInterface = builder.getInterface();
+const router = getRouter(addonInterface);
+app.use(router);
+
+// Start server
+const port = process.env.PORT || 3000;
+http.createServer(app).listen(port, () => {
+  console.log(`Server started on http://localhost:${port}`);
+});

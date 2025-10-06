@@ -2,6 +2,7 @@
 /node_modules
 
 # Runtime directories
+/dist/
 /subtitles/
 /data/
 /database/
